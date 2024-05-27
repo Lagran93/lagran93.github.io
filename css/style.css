@@ -98,7 +98,6 @@ code {
 }
 .nav-box {
   display: flex;
-  justify-content: flex-end;
 }
 .nav-box .nav-item {
   padding: 14px 20px;
