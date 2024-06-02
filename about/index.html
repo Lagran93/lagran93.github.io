@@ -24,7 +24,7 @@
 
 <link href="/css/style.css?v=1.1.0" rel="stylesheet">
 
-<link href="/css/hl_theme/atom-light.css?v=1.1.0" rel="stylesheet">
+<link href="/css/hl_theme/sublime.css?v=1.1.0" rel="stylesheet">
 
 <link href="//cdn.jsdelivr.net/npm/animate.css@4.1.0/animate.min.css" rel="stylesheet">
 
@@ -80,7 +80,7 @@
     <li>
         <div class="all active" data-rel="全部文章">全部文章
             
-                <small>(3)</small>
+                <small>(4)</small>
             
         </div>
     </li>
@@ -128,6 +128,40 @@
     
         
             
+                
+    <li>
+        <div data-rel="后端">
+            <i class="fold iconfont icon-right"></i>
+            后端
+            <small>(1)</small>
+        </div>
+        
+            <ul class="sub hide">
+                
+                    
+    <li>
+        <div data-rel="后端&lt;---&gt;golang">
+            
+            golang
+            <small>(1)</small>
+        </div>
+        
+    </li>
+
+                
+            </ul>
+        
+    </li>
+
+            
+        
+    
+        
+            
+        
+    
+        
+            
         
     
         
@@ -151,7 +185,7 @@
         
     </div>
 </div>
-<input type="hidden" id="yelog_site_posts_number" value="3">
+<input type="hidden" id="yelog_site_posts_number" value="4">
 
 <div style="display: none">
     <span id="busuanzi_value_site_uv"></span>
@@ -202,7 +236,19 @@
             </li>
         
             <li class="article-tag-list-item">
+                <i class="iconfont icon-tag"></i><a>流式传输</a>
+            </li>
+        
+            <li class="article-tag-list-item">
                 <i class="iconfont icon-tag"></i><a>岩土</a>
+            </li>
+        
+            <li class="article-tag-list-item">
+                <i class="iconfont icon-tag"></i><a>golang</a>
+            </li>
+        
+            <li class="article-tag-list-item">
+                <i class="iconfont icon-tag"></i><a>snippets</a>
             </li>
         
     </div>
@@ -211,6 +257,15 @@
 
     
     <nav id="title-list-nav">
+        
+        
+        <a  class="全部文章 后端 golang "
+           href="/2024/06/02/How%20to%20display%20the%20output%20of%20cmd%20console%20in%20real%20time%20on%20the%20browser%20in%20go%20(streaming)/"
+           data-tag="golang,流式传输,snippets"
+           data-author="" >
+            <span class="post-title" title="go中如何在浏览器上实时显示cmd控制台的输出（流式传输）">go中如何在浏览器上实时显示cmd控制台的输出（流式传输）</span>
+            <span class="post-date" title="2024-06-02 14:32:00">2024/06/02</span>
+        </a>
         
         
         <a  class="全部文章 笔记 注岩考试 "
@@ -454,6 +509,16 @@
     /*文章列表背景图*/
     
 
+    
+    #post .pjax article :not(pre) > code {
+        color: #24292e;
+        font-family: SFMono-Regular,Consolas,Liberation Mono,Menlo,Courier,monospace;
+        background-color: rgba(27,31,35,.05);
+        border-radius: 3px;
+        font-size: 85%;
+        margin: 0;
+        padding: .2em .4em;
+    }
     
 </style>
 
