@@ -2,9 +2,9 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>我的第一篇博客 | 岩土博客</title>
+  <title>关于挡土墙第二破裂面的疑问 | 岩土博客</title>
   <meta name="keywords" content=" 笔记 , 岩土 ">
-  <meta name="description" content="我的第一篇博客 | 岩土博客">
+  <meta name="description" content="关于挡土墙第二破裂面的疑问 | 岩土博客">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <meta name="description" content="欢迎来到岩土博客！这里是岩土工程工作者的家园，为广大的岩土工程工作者提供了一个集学习、交流、成长于一体的线上平台。在这里，您可以获取到最新的岩土工程资讯、探讨技术难题、分享经验案例，也可以与其他同行进行深入的学术交流与合作。我们致力于为广大岩土工程师打造一个专业、活跃、有价值的社区，助力您在职业生涯中不断成长与发展。">
 <meta property="og:type" content="website">
@@ -257,9 +257,9 @@
 </aside>
 <div id="post">
     <div class="pjax">
-        <article id="post-my-first-post" class="article article-type-post" itemscope itemprop="blogPost">
+        <article id="post-Questions about the second rupture surface of the retaining wall" class="article article-type-post" itemscope itemprop="blogPost">
     
-        <h1 class="article-title">我的第一篇博客</h1>
+        <h1 class="article-title">关于挡土墙第二破裂面的疑问</h1>
     
     <div class="article-meta">
         
@@ -271,7 +271,7 @@
             
             <a  data-rel="笔记">笔记</a> > 
             
-            <a  data-rel="笔记&lt;---&gt;岩土规范">岩土规范</a>
+            <a  data-rel="笔记&lt;---&gt;注岩考试">注岩考试</a>
             
         </span>
         
@@ -288,7 +288,7 @@
     </div>
     <div class="article-meta">
         
-            发布时间 : <time class="date" title='最后更新: 2024-06-01 18:01:28'>2024-05-27 13:06</time>
+            发布时间 : <time class="date" title='最后更新: 2024-06-02 14:15:45'>2024-06-02 12:41</time>
         
     </div>
     <div class="article-meta">
@@ -310,7 +310,7 @@
     
     <div class="toc-ref">
     
-        
+        <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E8%83%8C%E6%99%AF%E8%B5%84%E6%96%99"><span class="toc-text">背景资料</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%88%86%E6%9E%90"><span class="toc-text">分析</span></a></li></ol>
     
 <style>
     .left-col .switch-btn,
@@ -326,8 +326,20 @@
     
     <div class="article-entry" itemprop="articleBody">
       
-        <p>这里是文章内容。</p>
-<p>$a^2$</p>
+        <h2 id="背景资料"><a href="#背景资料" class="headerlink" title="背景资料"></a>背景资料</h2><p>我们先来看一下某培训机构的一道注册岩土考试的习题：<br>某当土墙高7m，墙背倾角为$\alpha&#x3D;60^{\circ}$，墙后填土为砂土$c&#x3D;0kPa$，$\phi&#x3D;30^{\circ}$，$\gamma&#x3D;19kN&#x2F;m^3$，坡顶倾角$\beta&#x3D;15^{\circ}$，墙背与土的摩擦角$\delta&#x3D;10^{\circ}$，问作用于墙背的主动土压力为多少？</p>
+<h2 id="分析"><a href="#分析" class="headerlink" title="分析"></a>分析</h2><p>破裂临界角度$$\epsilon&#x3D;45^{\circ}-\frac{30^{\circ}}{2}+\frac{15^{\circ}}{2}-\frac{1}{2}arcsin(\frac{sin15^{\circ}}{sin30^{\circ}})&#x3D;21.09^{\circ}&lt;90^{\circ}-60^{\circ}&#x3D;30^{\circ}$$</p>
+<p>暂时以第二破裂面进行计算<br>$$l_1&#x3D;\frac{7}{sin60^{\circ}}&#x3D;8.083m$$<br>$$l_2&#x3D;\frac{7sin(60^{\circ}+15^{\circ})}{sin60^{\circ}sin(180^{\circ}-15^{\circ}-68.09^{\circ})}&#x3D;7.865m$$<br>$$l_3&#x3D;\frac{7sin(60^{\circ}+15^{\circ})}{sin60^{\circ}sin(\theta-15^{\circ})}&#x3D;\frac{7.807}{sin(\theta-15^{\circ})}m$$</p>
+<p>假想墙背主动土压力<br>$$E_a&#x3D;\frac{\frac12\times7.865\times\frac{7.807}{sin(\theta-15^{\circ})}\times sin(180^{\circ}-68.09^{\circ}-\theta)\times19\times sin(\theta-30^{\circ})}{sin(\theta-30^{\circ}+68.09^{\circ}-30^{\circ})}$$</p>
+<p>令$\frac{dE_a}{d\theta}&#x3D;0$，求得$$\theta&#x3D;51.9^{\circ}$$</p>
+<p>此时<br>$$E_a&#x3D;362.43kN&#x2F;m$$</p>
+<p>水平分力<br>$$E_{ax}&#x3D;362.43\sin(68.09^{\circ}-30^{\circ})&#x3D;223.58kN&#x2F;m$$</p>
+<p>竖向分力<br>$$E_{ay}&#x3D;362.43\cos(68.09^{\circ}-30^{\circ})&#x3D;285.25kN&#x2F;m$$</p>
+<p>重力<br>$$G&#x3D;\frac12\times8.083\times7.865\times\sin8.09^{\circ}\times19&#x3D;84.99kN&#x2F;m$$</p>
+<p>墙背主动土压力<br>$$E^{‘}_{a}&#x3D;\sqrt{223.58^2+(285.25+84.99)^2}&#x3D;432.51kN&#x2F;m$$</p>
+<p>某培训机构的解析到此结束。</p>
+<p>其实再往下思考，继续求得此时墙背真正的摩擦角</p>
+<p>$$\delta&#x3D;\arctan(\frac{233.58}{285.25+84.99})&#x3D;28.87^{\circ}&gt;10^{\circ}$$</p>
+<p>而墙背能发挥的最大摩擦角为$\delta&#x3D;10^{\circ}$，并不能提供$28.87^{\circ}$的摩擦角，此时该如何处理？</p>
 
       
        <hr><span style="font-style: italic;color: gray;"> 转载请注明来源，欢迎对文章中的引用来源进行考证，欢迎指出任何有错误或不够清晰的表达。可以在下面评论区评论，也可以邮件至 admin@yantu.org </span>
