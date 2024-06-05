@@ -2,9 +2,9 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>岩土博客</title>
-  <meta name="keywords" content="">
-  <meta name="description" content="岩土博客">
+  <title>Golang 写的一个计算挡土墙主动土压力的计算小程序 | 岩土博客</title>
+  <meta name="keywords" content=" golang , snippets ">
+  <meta name="description" content="Golang 写的一个计算挡土墙主动土压力的计算小程序 | 岩土博客">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <meta name="description" content="欢迎来到岩土博客！这里是岩土工程工作者的家园，为广大的岩土工程工作者提供了一个集学习、交流、成长于一体的线上平台。在这里，您可以获取到最新的岩土工程资讯、探讨技术难题、分享经验案例，也可以与其他同行进行深入的学术交流与合作。我们致力于为广大岩土工程师打造一个专业、活跃、有价值的社区，助力您在职业生涯中不断成长与发展。">
 <meta property="og:type" content="website">
@@ -57,7 +57,7 @@
 
 
 <body>
-<aside class="nav mobile">
+<aside class="nav">
     <div class="nav-left">
         <a href="/"
    class="avatar_target">
@@ -319,12 +319,64 @@
         </div>
     </div>
 </aside>
-<div id="post" class="index">
+<div id="post">
     <div class="pjax">
-        <article class="index">
-            <div class="toc-ref">
+        <article id="post-application for calculate active earth pressure" class="article article-type-post" itemscope itemprop="blogPost">
     
-        <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#Why-Blog"><span class="toc-text">Why Blog</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%AF%B9%E5%8D%9A%E5%AE%A2%E7%9A%84%E7%90%86%E8%A7%A3"><span class="toc-text">对博客的理解</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%85%B3%E4%BA%8E%E5%B2%A9%E5%9C%9F%E5%8D%9A%E5%AE%A2"><span class="toc-text">关于岩土博客</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8D%9A%E5%AE%A2%E5%B9%B3%E5%8F%B0"><span class="toc-text">博客平台</span></a></li></ol></li></ol>
+        <h1 class="article-title">Golang 写的一个计算挡土墙主动土压力的计算小程序</h1>
+    
+    <div class="article-meta">
+        
+        
+        
+        <span class="book">
+            <i class="iconfont icon-category"></i>
+            
+            
+            <a  data-rel="后端">后端</a> > 
+            
+            <a  data-rel="后端&lt;---&gt;golang">golang</a>
+            
+        </span>
+        
+        
+        <span class="tag">
+            <i class="iconfont icon-tag"></i>
+            
+            <a class="color2">golang</a>
+            
+            <a class="color4">snippets</a>
+            
+        </span>
+        
+    </div>
+    <div class="article-meta">
+        
+            发布时间 : <time class="date" title='最后更新: 2024-06-05 23:39:04'>2024-06-05 12:41</time>
+        
+    </div>
+    <div class="article-meta">
+        
+        <span>字数:578</span>
+        
+        
+        <span id="busuanzi_container_page_pv">
+            阅读 :<span id="busuanzi_value_page_pv">
+                <span class="count-comment">
+                    <span class="spinner">
+                      <div class="cube1"></div>
+                      <div class="cube2"></div>
+                    </span>
+                </span>
+            </span>
+        </span>
+        
+        
+    </div>
+    
+    <div class="toc-ref">
+    
+        
     
 <style>
     .left-col .switch-btn,
@@ -337,32 +389,109 @@
     }
 </style>
 </div>
-            <h1 id="Why-Blog"><a href="#Why-Blog" class="headerlink" title="Why Blog"></a>Why Blog</h1><h2 id="对博客的理解"><a href="#对博客的理解" class="headerlink" title="对博客的理解"></a>对博客的理解</h2><p>喜欢写Blog的人，会经历三个阶段。</p>
-<blockquote>
-<p>第一阶段，刚接触Blog，觉得很新鲜，试着选择一个免费空间来写。</p>
-</blockquote>
-<blockquote>
-<p>第二阶段，发现免费空间限制太多，就自己购买域名和空间，搭建独立博客。</p>
-</blockquote>
-<blockquote>
-<p>第三阶段，觉得独立博客的管理太麻烦，最好在保留控制权的前提下，让别人来管，自己只负责写文章。</p>
-</blockquote>
-<p>我们每个人的在网络上产生的数据越来越多，这些信息是我们在互联网上存在过的痕迹，值得我们认真对待。但是它们被分散分布在各个网站上。很多时候我们很难将它们聚合在一起，而且各个网站的信息排布方式也没有办法自由控制，所以我们需要一个可以由自己主宰的空间——博客。</p>
-<p>通过博客，我们可以记录自己的生活和成长的轨迹。它不像 Twitter 那样碎片化，也不像 Facebook 那样关系化，它是私人的空间。</p>
-<h2 id="关于岩土博客"><a href="#关于岩土博客" class="headerlink" title="关于岩土博客"></a>关于岩土博客</h2><p><strong>岩土博客</strong> 是岩土工程工作者的家园，为广大的岩土工程工作者提供了一个集学习、交流、成长于一体的线上平台。在这里，您可以获取到最新的岩土工程资讯、探讨技术难题、分享经验案例，也可以与其他同行进行深入的学术交流与合作。我们致力于为广大岩土工程师打造一个专业、活跃、有价值的社区，助力您在职业生涯中不断成长与发展。</p>
-<p>到目前为止已经写了<code class="article_number"></code>篇文章， 共<code class="site_word_count"></code>字。</p>
-<p>本站访问人数：<code class="site_uv"></code>人次 ， 访问量：<code class="site_pv"></code>次</p>
-<h2 id="博客平台"><a href="#博客平台" class="headerlink" title="博客平台"></a>博客平台</h2><p>这个博客通过 <a target="_blank" rel="noopener" href="https://hexo.io/">Hexo</a> 生成，部署在 <a target="_blank" rel="noopener" href="https://pages.github.com/">GitHub Pages</a>主题 <a target="_blank" rel="noopener" href="https://github.com/yelog/hexo-theme-3-hexo">3-hexo</a> 已经在github上开源</p>
-<p>主要功能：</p>
-<ul>
-<li>搜索支持文章标题、标签(#标签)、作者(@作者)</li>
-<li>pad&#x2F;手机等移动端适配</li>
-<li>页面全局快捷键 <a target="_blank" rel="noopener" href='http://yelog.org/2017/03/24/3-hexo-shortcuts/'>3-hexo快捷键说明</a></li>
-</ul>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <pre><code class="go">package main
 
-        </article>
-        
-        
+import (
+    &quot;fmt&quot;
+    &quot;math&quot;
+    &quot;sort&quot;
+)
+
+// 定义挡土墙的参数
+var (
+    height float64
+    alpha  float64
+    beta   float64
+    delta  float64
+)
+
+// 定义墙后土体的参数
+var (
+    gamma    float64
+    cohesion float64
+    phi      float64
+)
+
+var q float64
+
+type Rad float64
+type Degree float64
+
+// 提示用户输入具体墙的高度、倾角、墙顶边坡倾角、挡土墙与土体之间的摩擦角、土体重度、土体黏聚强度和土体摩擦角的值。
+// 这些输入的值将存储在相应的变量中。
+func init() &#123;
+    fmt.Print(&quot;请输入挡土墙高度h(m):&quot;)
+    fmt.Scanf(&quot;%f&quot;, &amp;height)
+    fmt.Print(&quot;请输入挡土墙倾角α(°):&quot;)
+    fmt.Scanf(&quot;%f&quot;, &amp;alpha)
+    fmt.Print(&quot;请输入墙顶边坡倾角β(°):&quot;)
+    fmt.Scanf(&quot;%f&quot;, &amp;beta)
+    fmt.Print(&quot;请输入挡土墙与土体之间的摩擦角δ(°):&quot;)
+    fmt.Scanf(&quot;%f&quot;, &amp;delta)
+    fmt.Print(&quot;请输入土体重度γ(kN/m3):&quot;)
+    fmt.Scanf(&quot;%f&quot;, &amp;gamma)
+    fmt.Print(&quot;请输入土体黏聚强度c(kPa)&quot;)
+    fmt.Scanf(&quot;%f&quot;, &amp;cohesion)
+    fmt.Print(&quot;请输入土体摩擦角φ(°):&quot;)
+    fmt.Scanf(&quot;%f&quot;, &amp;phi)
+    fmt.Print(&quot;请输入坡顶超载q(kN/m2):&quot;)
+    fmt.Scanf(&quot;%f&quot;, &amp;q)
+&#125;
+
+// ToDegree 函数将弧度值转换为角度值。它接受一个 Rad 值作为输入，并返回一个 Degree 值。
+func (d Degree) toRad() Rad &#123;
+    return Rad(d * math.Pi / 180)
+&#125;
+
+func main() &#123;
+    //假设破裂角θ
+    var theta float64
+    type totalActiveEarthPressure struct &#123;
+        theta   float64
+        presure float64
+    &#125;
+    var presure float64
+    var totalActiveEarthPressures []totalActiveEarthPressure
+
+    for theta = beta + 0.1; theta &lt;= 180-alpha; theta += 0.1 &#123;
+        // 计算每个θ下的主动土压力
+        l1 := height / math.Sin(float64(Degree(alpha).toRad()))
+        l2 := l1 / math.Sin(float64(Degree(theta-beta).toRad())) * math.Sin(float64(Degree(alpha+beta).toRad()))
+        l3 := l1 / math.Sin(float64(Degree(theta-beta).toRad())) * math.Sin(float64(Degree(180-alpha-theta).toRad()))
+        //破裂体的重量
+        G := 0.5*l1*l2*math.Sin(float64(Degree(180-alpha-theta).toRad()))*gamma + q*l3*math.Cos(float64(Degree(beta).toRad()))
+        //核心公式
+        presure = (G*math.Sin(float64(Degree(theta-phi).toRad())) - cohesion*l2*math.Cos(float64(Degree(phi).toRad()))) / math.Sin(float64(Degree(theta-phi+alpha-delta).toRad()))
+        totalActiveEarthPressures = append(totalActiveEarthPressures, totalActiveEarthPressure&#123;theta: theta, presure: presure&#125;)
+    &#125;
+    // 按主动土压力降序排序，寻找极值及相应的破裂角。
+    sort.Slice(totalActiveEarthPressures, func(i, j int) bool &#123;
+        return totalActiveEarthPressures[i].presure &gt; totalActiveEarthPressures[j].presure
+    &#125;)
+    fmt.Printf(&quot;破裂角θ=%.2f°，相应的主动土压力为%.2fkN/m\n&quot;, totalActiveEarthPressures[0].theta, totalActiveEarthPressures[0].presure)
+    fmt.Println(&quot;计算完成&quot;)
+&#125;
+</code></pre>
+
+      
+       <hr><span style="font-style: italic;color: gray;"> 转载请注明来源，欢迎对文章中的引用来源进行考证，欢迎指出任何有错误或不够清晰的表达。可以在下面评论区评论，也可以邮件至 admin@yantu.org </span>
+    </div>
+</article>
+
+
+
+
+
+
+
+    
+
+
+
+
     </div>
     <div class="copyright">
         <p class="footer-entry">
@@ -371,11 +500,11 @@
 <p class="footer-entry">Built with <a href="https://hexo.io/" target="_blank">Hexo</a> and <a href="https://github.com/yelog/hexo-theme-3-hexo" target="_blank">3-hexo</a> theme</p>
 
     </div>
-</div>
-<div class="full-toc">
-    <button class="full" data-title="切换全屏 快捷键 s"><span class="min "></span></button>
+    <div class="full-toc">
+        <button class="full" data-title="切换全屏 快捷键 s"><span class="min "></span></button>
 <a class="" id="rocket" ></a>
 
+    </div>
 </div>
 
 </body>
