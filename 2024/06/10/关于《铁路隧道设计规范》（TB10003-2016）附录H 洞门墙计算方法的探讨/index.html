@@ -2,9 +2,9 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>go中如何在浏览器上实时显示cmd控制台的输出（流式传输） | 岩土博客</title>
-  <meta name="keywords" content=" golang , 流式传输 , snippets ">
-  <meta name="description" content="go中如何在浏览器上实时显示cmd控制台的输出（流式传输） | 岩土博客">
+  <title>关于《铁路隧道设计规范》（TB10003-2016）附录H 洞门墙计算方法的探讨 | 岩土博客</title>
+  <meta name="keywords" content=" 笔记 , 岩土 ">
+  <meta name="description" content="关于《铁路隧道设计规范》（TB10003-2016）附录H 洞门墙计算方法的探讨 | 岩土博客">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <meta name="description" content="欢迎来到岩土博客！这里是岩土工程工作者的家园，为广大的岩土工程工作者提供了一个集学习、交流、成长于一体的线上平台。在这里，您可以获取到最新的岩土工程资讯、探讨技术难题、分享经验案例，也可以与其他同行进行深入的学术交流与合作。我们致力于为广大岩土工程师打造一个专业、活跃、有价值的社区，助力您在职业生涯中不断成长与发展。">
 <meta property="og:type" content="website">
@@ -330,9 +330,9 @@
 </aside>
 <div id="post">
     <div class="pjax">
-        <article id="post-How to display the output of cmd console in real time on the browser in go (streaming)" class="article article-type-post" itemscope itemprop="blogPost">
+        <article id="post-关于《铁路隧道设计规范》（TB10003-2016）附录H 洞门墙计算方法的探讨" class="article article-type-post" itemscope itemprop="blogPost">
     
-        <h1 class="article-title">go中如何在浏览器上实时显示cmd控制台的输出（流式传输）</h1>
+        <h1 class="article-title">关于《铁路隧道设计规范》（TB10003-2016）附录H 洞门墙计算方法的探讨</h1>
     
     <div class="article-meta">
         
@@ -342,9 +342,9 @@
             <i class="iconfont icon-category"></i>
             
             
-            <a  data-rel="后端">后端</a> > 
+            <a  data-rel="笔记">笔记</a> > 
             
-            <a  data-rel="后端&lt;---&gt;golang">golang</a>
+            <a  data-rel="笔记&lt;---&gt;注岩考试">注岩考试</a>
             
         </span>
         
@@ -352,23 +352,21 @@
         <span class="tag">
             <i class="iconfont icon-tag"></i>
             
-            <a class="color2">golang</a>
+            <a class="color3">笔记</a>
             
-            <a class="color5">流式传输</a>
-            
-            <a class="color4">snippets</a>
+            <a class="color3">岩土</a>
             
         </span>
         
     </div>
     <div class="article-meta">
         
-            发布时间 : <time class="date" title='最后更新: 2024-06-02 14:53:34'>2024-06-02 14:32</time>
+            发布时间 : <time class="date" title='最后更新: 2024-06-10 16:00:35'>2024-06-10 12:10</time>
         
     </div>
     <div class="article-meta">
         
-        <span>字数:655</span>
+        <span>字数:771</span>
         
         
         <span id="busuanzi_container_page_pv">
@@ -387,7 +385,7 @@
     
     <div class="toc-ref">
     
-        <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#Code-snippet-1"><span class="toc-text">Code snippet 1</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Code-snippet-2"><span class="toc-text">Code snippet 2</span></a></li></ol>
+        
     
 <style>
     .left-col .switch-btn,
@@ -403,156 +401,94 @@
     
     <div class="article-entry" itemprop="articleBody">
       
-        <h2 id="Code-snippet-1"><a href="#Code-snippet-1" class="headerlink" title="Code snippet 1"></a>Code snippet 1</h2><pre><code class="golang">package main
+        <ol>
+<li>最危险破裂面与垂直面之间的夹角</li>
+</ol>
+<p>$$<br>\tan \omega&#x3D;\frac{\tan^2\phi+\tan\epsilon\tan\alpha-A\frac{\tan\epsilon}{1-\tan\epsilon\tan\alpha}(1+\tan^2\phi)}{\tan\epsilon(1-A\frac{\tan\epsilon}{1-\tan\epsilon\tan\alpha})(1+\tan^2\phi)-\tan\phi(1-\tan\alpha\tan\epsilon)}-\frac{\sqrt{(1+\tan^2\phi)(\tan\phi-\tan\epsilon)[(1-\tan\epsilon\tan\alpha)(\tan\phi+\tan\alpha)-A(1+\tan\phi\tan\epsilon)]}}{\tan\epsilon(1-A\frac{\tan\epsilon}{1-\tan\epsilon\tan\alpha})(1+\tan^2\phi)-\tan\phi(1-\tan\alpha\tan\epsilon)}<br>$$</p>
+<p>此公式最本质的来源是求极限平衡状态下的滑动体的水平力，可用核心公式计算，其中令$\alpha-\delta&#x3D;0$，经过求导求极值即可。</p>
+<p>我们可以用程序来验证，结果发现求得的破裂角与规范公式求得的结果一致。</p>
+<pre><code class="go">package main
 
 import (
-    &quot;bufio&quot;
     &quot;fmt&quot;
-    &quot;io&quot;
-    &quot;log&quot;
-    &quot;net/http&quot;
-    &quot;os/exec&quot;
-
-    &quot;github.com/nbari/violetear&quot;
+    &quot;math&quot;
+    &quot;sort&quot;
 )
 
-func main() &#123;
-    // http.HandleFunc(&quot;/&quot;, handleRequest)
-    // http.ListenAndServe(&quot;:8888&quot;, nil)
-    router := violetear.New()
-    router.HandleFunc(&quot;/cmd&quot;, handleRequest, &quot;GET&quot;)
-    router.HandleFunc(&quot;/hello&quot;, func(w http.ResponseWriter, r *http.Request) &#123;
-        fmt.Fprintf(w, &quot;Hello, World!&quot;)
-    &#125;, &quot;GET&quot;)
-    log.Fatal(http.ListenAndServe(&quot;:8888&quot;, router))
+var (
+    height, alphaDegree, alpha, betaDegree, beta float64
+)
+
+var (
+    cohesion, phiDegree, phi, gamma float64
+)
+
+var horizontalLength float64
+
+// 计算精度
+const STEP = 0.0001
+
+func init() &#123;
+
+    fmt.Print(&quot;请输入挡土墙高度h(m):&quot;)
+    fmt.Scanf(&quot;%f&quot;, &amp;height)
+    fmt.Print(&quot;请输入挡土墙倾角α(°):&quot;)
+    fmt.Scanf(&quot;%f&quot;, &amp;alphaDegree)
+    alpha = alphaDegree * math.Pi / 180
+    fmt.Print(&quot;请输入墙顶边坡倾角β(°):&quot;)
+    fmt.Scanf(&quot;%f&quot;, &amp;betaDegree)
+    beta = betaDegree * math.Pi / 180
+    fmt.Print(&quot;请输入土体重度γ(kN/m3):&quot;)
+    fmt.Scanf(&quot;%f&quot;, &amp;gamma)
+    fmt.Print(&quot;请输入土体黏聚强度c(kPa)&quot;)
+    fmt.Scanf(&quot;%f&quot;, &amp;cohesion)
+    fmt.Print(&quot;请输入土体摩擦角φ(°):&quot;)
+    fmt.Scanf(&quot;%f&quot;, &amp;phiDegree)
+    phi = phiDegree * math.Pi / 180
+    fmt.Print(&quot;请输入坡顶水平长度L(m):&quot;)
+    fmt.Scanf(&quot;%f&quot;, &amp;horizontalLength)
 &#125;
-func handleRequest(w http.ResponseWriter, r *http.Request) &#123;
-    w.Header().Set(&quot;Cache-Control&quot;, &quot;no-cache&quot;)
-    // 使浏览器页面的滚动条始终置于底部
-    scroll := `&lt;body style=&quot;word-wrap: break-word; white-space: pre-wrap; background-color: #444; color: #fff; font-family: mono&quot;&gt;&lt;script&gt;
-    const resizeObserver = new ResizeObserver(() =&gt;
-        window.scrollTo(0, document.body.scrollHeight)
-    )
-    // start observing a DOM node
-    resizeObserver.observe(document.body)
-&lt;/script&gt;&lt;/body&gt;
-`
-    fmt.Fprint(w, scroll)
-    // cmd := exec.Command(&quot;ping&quot;, &quot;-4&quot;, &quot;www.tumupan.com&quot;, &quot;-c&quot;, &quot;4&quot;) // 执行ping命令
-    cmd := exec.Command(&quot;ifconfig&quot;)
-    stdout, err := cmd.StdoutPipe()
-    if err != nil &#123;
-        log.Println(&quot;Error:&quot;, err)
-        return
+func main() &#123;
+    type thetaPressure struct &#123;
+        thetaDegree float64
+        pressure    float64
     &#125;
-    err = cmd.Start()
-    if err != nil &#123;
-        log.Println(&quot;Error:&quot;, err)
-        return
-    &#125;
-    reader := bufio.NewReader(stdout)
-    for &#123;
-        line, err := reader.ReadString(&#39;\n&#39;)
-        if err != nil || io.EOF == err &#123;
-            log.Println(&quot;Command is finished.&quot;)
-            break
+    var totalActiveEarthPressures []thetaPressure
+    var thetaDegree float64
+    var totalActiveEarthPressure float64
+
+    for thetaDegree = betaDegree + STEP; thetaDegree &lt;= 180-alphaDegree; thetaDegree += STEP &#123;
+        // l1 := height / math.Sin(alpha)
+        l2 := horizontalLength
+        t := height/math.Tan(thetaDegree*math.Pi/180) - height/math.Tan(math.Pi-alpha) - 2
+        if t &lt; 0 &#123;
+            // todo: 此时滑动面于坡顶水平平台相交
         &#125;
-        fmt.Fprintf(w, line)     // 将输出写入http响应
-        w.(http.Flusher).Flush() // 刷新http响应
+        l3 := t * math.Sin(math.Pi-thetaDegree*math.Pi/180) / math.Sin(thetaDegree*math.Pi/180-beta)
+        l4 := (height + l3*math.Sin(beta)) / math.Sin(thetaDegree*math.Pi/180)
+        area := 0.5*(l2+t)*height + 0.5*t*l3*math.Sin(beta)
+        gravity := area * gamma
+        theta := thetaDegree * math.Pi / 180
+
+        //核心公式
+        totalActiveEarthPressure = (gravity*math.Sin(thetaDegree*math.Pi/180-phi) - cohesion*l4*math.Cos(phi)) / math.Sin(theta-phi+math.Pi/2)
+        fmt.Println(thetaDegree, totalActiveEarthPressure)
+        totalActiveEarthPressures = append(totalActiveEarthPressures, thetaPressure&#123;thetaDegree: thetaDegree, pressure: totalActiveEarthPressure&#125;)
     &#125;
-    err = cmd.Wait()
-    if err != nil &#123;
-        log.Println(&quot;Error:&quot;, err)
-        return
-    &#125;
+
+    sort.Slice(totalActiveEarthPressures, func(i, j int) bool &#123;
+        return totalActiveEarthPressures[i].pressure &gt; totalActiveEarthPressures[j].pressure
+    &#125;)
+
+    fmt.Printf(&quot;破裂角θ=%.4f°，相应的主动土压力为%.4fkN/m\n&quot;, totalActiveEarthPressures[0].thetaDegree, totalActiveEarthPressures[0].pressure)
 &#125;
 </code></pre>
-<h2 id="Code-snippet-2"><a href="#Code-snippet-2" class="headerlink" title="Code snippet 2"></a>Code snippet 2</h2><pre><code class="golang">package main
-
-import (
-    &quot;bufio&quot;
-    &quot;fmt&quot;
-    &quot;io&quot;
-    &quot;log&quot;
-    &quot;net/http&quot;
-    &quot;os&quot;
-    &quot;os/exec&quot;
-
-    &quot;github.com/nbari/violetear&quot;
-)
-
-func stream(w http.ResponseWriter, r *http.Request) &#123;
-    // 使浏览器页面的滚动条始终置于底部
-    scroll := `
-&lt;body style=&quot;word-wrap: break-word; white-space: pre-wrap;&quot;&gt;&lt;script&gt;
-    const resizeObserver = new ResizeObserver(() =&gt;
-        window.scrollTo(0, document.body.scrollHeight)
-    )
-    // start observing a DOM node
-    resizeObserver.observe(document.body)
-&lt;/script&gt;&lt;/body&gt;
-`
-    fmt.Fprint(w, scroll)
-
-    ctx := r.Context()
-    ch := make(chan struct&#123;&#125;)
-
-    // 每1秒输出一个数，逐渐递增
-    cmd := exec.CommandContext(ctx, &quot;ping&quot;, &quot;www.baidu.com&quot;)
-    rPipe, wPipe, err := os.Pipe()
-    if err != nil &#123;
-        log.Fatal(err)
-    &#125;
-    cmd.Stdout = wPipe
-    cmd.Stderr = wPipe
-    if err := cmd.Start(); err != nil &#123;
-        log.Fatal(err)
-    &#125;
-
-    go writeOutput(w, rPipe)
-
-    go func(ch chan struct&#123;&#125;) &#123;
-        cmd.Wait()
-        wPipe.Close()
-        ch &lt;- struct&#123;&#125;&#123;&#125;
-    &#125;(ch)
-
-    select &#123;
-    case &lt;-ch:
-    case &lt;-ctx.Done():
-        err := ctx.Err()
-        log.Printf(&quot;Client disconnected: %s\n&quot;, err)
-    &#125;
-&#125;
-
-func writeOutput(w http.ResponseWriter, input io.ReadCloser) &#123;
-    flusher, ok := w.(http.Flusher)
-    if !ok &#123;
-        http.Error(w, &quot;Streaming not supported&quot;, http.StatusInternalServerError)
-        return
-    &#125;
-
-    // Important to make it work in browsers
-    w.Header().Set(&quot;Content-Type&quot;, &quot;text/event-stream&quot;)
-    w.Header().Set(&quot;Cache-Control&quot;, &quot;no-cache&quot;)
-    w.Header().Set(&quot;Connection&quot;, &quot;keep-alive&quot;)
-
-    in := bufio.NewScanner(input)
-    for in.Scan() &#123;
-        data := in.Text()
-        log.Printf(&quot;data: %s\n&quot;, data)
-        fmt.Fprintf(w, &quot;data: %s\n&quot;, data)
-        flusher.Flush()
-    &#125;
-    input.Close()
-&#125;
-
-func main() &#123;
-    router := violetear.New()
-    router.HandleFunc(&quot;/&quot;, stream, &quot;GET&quot;)
-    log.Fatal(http.ListenAndServe(&quot;:8080&quot;, router))
-&#125;
-</code></pre>
+<ol start="2">
+<li><p>$\alpha$的较大或较小并不影响主动土压力的计算结果，破裂角$\omega$的大小受坡顶水平平台长度$a$的影响，一旦$a$确定，无论其大小，均不影响主动土压力的计算结果，即H.0.1-2中的“较大、较小”两种情形的计算结果一致。需要注意的是公式（H.0.1-4）计算$\lambda^{‘’}$的公式有误，应为：<br>$$<br>\lambda^{‘’}&#x3D;[\frac{(\tan\omega-\tan\alpha)(1-\tan\alpha\tan\epsilon)}{1-\tan\omega\tan\epsilon}+A]\frac{1}{\tan(\omega+\phi)}<br>$$</p>
+</li>
+<li><p>公式（H.0.1-4）计算$E$的公式有误，与规范配图不一致，应为：<br>$$<br>E&#x3D;\frac{1}{2} b\gamma H^2 \lambda^{‘’}<br>$$</p>
+</li>
+</ol>
 
       
        <hr><span style="font-style: italic;color: gray;"> 转载请注明来源，欢迎对文章中的引用来源进行考证，欢迎指出任何有错误或不够清晰的表达。可以在下面评论区评论，也可以邮件至 admin@yantu.org </span>
@@ -565,6 +501,46 @@ func main() &#123;
 
 
 
+    
+        <!-- MathJax配置，可通过单美元符号书写行内公式等 -->
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+    "HTML-CSS": {
+        preferredFont: "TeX",
+        availableFonts: ["STIX","TeX"],
+        linebreaks: { automatic:true },
+        EqnChunk: (MathJax.Hub.Browser.isMobile ? 10 : 50)
+    },
+    tex2jax: {
+        inlineMath: [ ["$", "$"], ["\\(","\\)"] ],
+        processEscapes: true,
+        ignoreClass: "tex2jax_ignore|dno",
+        skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    },
+    TeX: {
+        equationNumbers: { autoNumber: "AMS" },
+        noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } },
+        Macros: { href: "{}" }
+    },
+    messageStyle: "none"
+    });
+</script>
+<!-- 给MathJax元素添加has-jax class -->
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax(), i;
+        for(i=0; i < all.length; i += 1) {
+            all[i].SourceElement().parentNode.className += ' has-jax';
+        }
+    });
+</script>
+<!-- 通过连接CDN加载MathJax的js代码 -->
+<script type="text/javascript" async
+        src="//cdn.jsdelivr.net/npm/mathjax@2.7.8/unpacked/MathJax.js?config=TeX-MML-AM_CHTML">
+</script>
+<input type="hidden" id="MathJax-js"
+        value="//cdn.jsdelivr.net/npm/mathjax@2.7.8/unpacked/MathJax.js?config=TeX-MML-AM_CHTML">
+</input>
     
 
 
