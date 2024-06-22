@@ -2,9 +2,9 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Golang 写的一个计算挡土墙主动土压力的计算小程序 | 岩土博客</title>
-  <meta name="keywords" content=" golang , snippets ">
-  <meta name="description" content="Golang 写的一个计算挡土墙主动土压力的计算小程序 | 岩土博客">
+  <title>岩土博客</title>
+  <meta name="keywords" content="">
+  <meta name="description" content="岩土博客">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <meta name="description" content="欢迎来到岩土博客！这里是岩土工程工作者的家园，为广大的岩土工程工作者提供了一个集学习、交流、成长于一体的线上平台。在这里，您可以获取到最新的岩土工程资讯、探讨技术难题、分享经验案例，也可以与其他同行进行深入的学术交流与合作。我们致力于为广大岩土工程师打造一个专业、活跃、有价值的社区，助力您在职业生涯中不断成长与发展。">
 <meta property="og:type" content="website">
@@ -339,43 +339,22 @@
 </aside>
 <div id="post">
     <div class="pjax">
-        <article id="post-application for calculate active earth pressure" class="article article-type-post" itemscope itemprop="blogPost">
-    
-        <h1 class="article-title">Golang 写的一个计算挡土墙主动土压力的计算小程序</h1>
+        <article id="post-关于《公路隧道设计规范》（第一册 土建工程）中小净距隧道围岩压力计算方法中的一处疑问" class="article article-type-post" itemscope itemprop="blogPost">
     
     <div class="article-meta">
         
         
         
-        <span class="book">
-            <i class="iconfont icon-category"></i>
-            
-            
-            <a  data-rel="后端">后端</a> > 
-            
-            <a  data-rel="后端&lt;---&gt;golang">golang</a>
-            
-        </span>
-        
-        
-        <span class="tag">
-            <i class="iconfont icon-tag"></i>
-            
-            <a class="color2">golang</a>
-            
-            <a class="color4">snippets</a>
-            
-        </span>
         
     </div>
     <div class="article-meta">
         
-            发布时间 : <time class="date" title='最后更新: 2024-06-05 23:39:04'>2024-06-05 12:41</time>
+            发布时间 : <time class="date" title='最后更新: 2024-06-22 10:56:12'>2024-06-22 11:04</time>
         
     </div>
     <div class="article-meta">
         
-        <span>字数:578</span>
+        <span>字数:230</span>
         
         
         <span id="busuanzi_container_page_pv">
@@ -410,89 +389,7 @@
     
     <div class="article-entry" itemprop="articleBody">
       
-        <pre><code class="go">package main
-
-import (
-    &quot;fmt&quot;
-    &quot;math&quot;
-    &quot;sort&quot;
-)
-
-// 定义挡土墙的参数
-var (
-    height float64
-    alpha  float64
-    beta   float64
-    delta  float64
-)
-
-// 定义墙后土体的参数
-var (
-    gamma    float64
-    cohesion float64
-    phi      float64
-)
-
-var q float64
-
-type Rad float64
-type Degree float64
-
-// 提示用户输入具体墙的高度、倾角、墙顶边坡倾角、挡土墙与土体之间的摩擦角、土体重度、土体黏聚强度和土体摩擦角的值。
-// 这些输入的值将存储在相应的变量中。
-func init() &#123;
-    fmt.Print(&quot;请输入挡土墙高度h(m):&quot;)
-    fmt.Scanf(&quot;%f&quot;, &amp;height)
-    fmt.Print(&quot;请输入挡土墙倾角α(°):&quot;)
-    fmt.Scanf(&quot;%f&quot;, &amp;alpha)
-    fmt.Print(&quot;请输入墙顶边坡倾角β(°):&quot;)
-    fmt.Scanf(&quot;%f&quot;, &amp;beta)
-    fmt.Print(&quot;请输入挡土墙与土体之间的摩擦角δ(°):&quot;)
-    fmt.Scanf(&quot;%f&quot;, &amp;delta)
-    fmt.Print(&quot;请输入土体重度γ(kN/m3):&quot;)
-    fmt.Scanf(&quot;%f&quot;, &amp;gamma)
-    fmt.Print(&quot;请输入土体黏聚强度c(kPa)&quot;)
-    fmt.Scanf(&quot;%f&quot;, &amp;cohesion)
-    fmt.Print(&quot;请输入土体摩擦角φ(°):&quot;)
-    fmt.Scanf(&quot;%f&quot;, &amp;phi)
-    fmt.Print(&quot;请输入坡顶超载q(kN/m2):&quot;)
-    fmt.Scanf(&quot;%f&quot;, &amp;q)
-&#125;
-
-// ToDegree 函数将弧度值转换为角度值。它接受一个 Rad 值作为输入，并返回一个 Degree 值。
-func (d Degree) toRad() Rad &#123;
-    return Rad(d * math.Pi / 180)
-&#125;
-
-func main() &#123;
-    //假设破裂角θ
-    var theta float64
-    type totalActiveEarthPressure struct &#123;
-        theta   float64
-        presure float64
-    &#125;
-    var presure float64
-    var totalActiveEarthPressures []totalActiveEarthPressure
-
-    for theta = beta + 0.1; theta &lt;= 180-alpha; theta += 0.1 &#123;
-        // 计算每个θ下的主动土压力
-        l1 := height / math.Sin(float64(Degree(alpha).toRad()))
-        l2 := l1 / math.Sin(float64(Degree(theta-beta).toRad())) * math.Sin(float64(Degree(alpha+beta).toRad()))
-        l3 := l1 / math.Sin(float64(Degree(theta-beta).toRad())) * math.Sin(float64(Degree(180-alpha-theta).toRad()))
-        //破裂体的重量
-        G := 0.5*l1*l2*math.Sin(float64(Degree(180-alpha-theta).toRad()))*gamma + q*l3*math.Cos(float64(Degree(beta).toRad()))
-        //核心公式
-        presure = (G*math.Sin(float64(Degree(theta-phi).toRad())) - cohesion*l2*math.Cos(float64(Degree(phi).toRad()))) / math.Sin(float64(Degree(theta-phi+alpha-delta).toRad()))
-        totalActiveEarthPressures = append(totalActiveEarthPressures, totalActiveEarthPressure&#123;theta: theta, presure: presure&#125;)
-    &#125;
-    // 按主动土压力降序排序，寻找极值及相应的破裂角。
-    sort.Slice(totalActiveEarthPressures, func(i, j int) bool &#123;
-        return totalActiveEarthPressures[i].presure &gt; totalActiveEarthPressures[j].presure
-    &#125;)
-    fmt.Printf(&quot;破裂角θ=%.2f°，相应的主动土压力为%.2fkN/m\n&quot;, totalActiveEarthPressures[0].theta, totalActiveEarthPressures[0].presure)
-    fmt.Println(&quot;计算完成&quot;)
-&#125;
-</code></pre>
+        <p>深埋小净距隧道围岩压力的确定中，小净距隧道形成的平衡拱一般介于以下两种极限状态之间：<br><img src="https://img.wdev.eu.org/file/2996d441c824bfe90b228.png" alt="图 F.0.3-1"><br><img src="https://img.wdev.eu.org/file/2f8d8f69f6dcc1cebf951.png" alt="图 F.0.3-3"><br>情况一：<br>隧道开挖方式不当，或中岩墙体加固措施合理，中岩墙承载能力较小，左右隧洞的平衡拱范围逐渐扩大，最后在左右洞室的上方形成一个共同的平衡拱。此时不考虑中夹岩柱作用，以整个小净距隧道开挖宽度作为毛洞跨度的塌落拱曲线，为最不利情形，此时塌落拱高度为：<br>$$<br>h_1^w&#x3D;0.45\times 2^{s-1} \times [1+i(2B_t+B_{np}-5)]<br>$$<br>根据这段话的描述，以及配合图F.0.3-1、图F.0.3-3，公式中的$B_{np}$ 显然与描述不一致，公式改为<br>$$<br>h_1^w&#x3D;0.45\times 2^{s-1} \times [1+i(2B_t+B_{z}-5)]<br>$$<br>更为合理。</p>
 
       
        <hr><span style="font-style: italic;color: gray;"> 转载请注明来源，欢迎对文章中的引用来源进行考证，欢迎指出任何有错误或不够清晰的表达。可以在下面评论区评论，也可以邮件至 admin@yantu.org </span>
