@@ -357,6 +357,17 @@
         </span>
         
         
+        <span class="top-comment" title="跳转至评论区">
+            <a href="#comments">
+                评论:<span class="count-comment">
+                    <span class="spinner">
+                      <div class="cube1"></div>
+                      <div class="cube2"></div>
+                    </span>
+                </span>
+            </a>
+        </span>
+        
     </div>
     
     <div class="toc-ref">
@@ -473,6 +484,27 @@ func main() &#123;
 
 
 
+
+
+    <div id="comments"></div>
+<link rel="stylesheet" href="https://cdn.akgo.net/npm/gitalk@1/dist/gitalk.css">
+
+<script type="text/javascript">
+    $.getScript('/js/gitalk.js', function () {
+        var gitalk = new Gitalk({
+            clientID: 'Ov23li06ZpQyD1ftCn4l',
+            clientSecret: '1bc40c0569dbe235fe6d2f5244c5150699f46a74',
+            repo: 'lagran93.github.io',
+            owner: 'Lagran93',
+            admin: ['Lagran93'],
+            id: decodeURI(location.pathname),
+            distractionFreeMode: 'true',
+            language: 'zh-CN',
+            perPage: parseInt('10',10)
+        })
+        gitalk.render('comments')
+    })
+</script>
 
 
 
