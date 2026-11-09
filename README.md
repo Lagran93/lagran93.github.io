@@ -64,3 +64,34 @@ https://github.com/Lagran93/Lagran/tree/main/docs
 ```
 
 `docs/reference/` 保留完整原始手册，便于查阅细节；其余页面为重新梳理后的导航式文档。
+
+
+## 绑定自定义域名
+
+仓库已内置：
+
+
+
+使用自定义域名 docs.lagrancdn.com：
+
+1. DNS 添加 CNAME：
+
+
+
+2. GitHub 仓库：
+
+
+
+3. 等待 GitHub DNS 校验通过，勾选 **Enforce HTTPS**。
+
+4. 如果 GitHub 提示域名验证，按提示添加：
+
+
+
+Cloudflare 用户建议先使用 **DNS only（灰云）**，证书签发后再决定是否代理。
+
+VitePress 使用根路径：
+
+
+
+因此自定义域名不需要额外路径前缀。
