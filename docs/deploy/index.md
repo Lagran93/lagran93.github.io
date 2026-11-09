@@ -20,7 +20,7 @@ DNS 只在需要 GeoDNS 时部署；不使用 GeoDNS 时可以直接把域名 CN
 | `8080` | Control | API / 控制台后端 |
 | `8081` | Edge | 公共 HTTP 数据面 |
 | `8082` | Edge | 管理口，只对 Control 开放 |
-| `8053` | DNS | 权威 DNS，按实际配置 |
+| `53/udp,tcp` | DNS | 权威 DNS，需要 root 或 CAP_NET_BIND_SERVICE |
 | `80/443` | Caddy/Edge | 站点与 HTTPS |
 
 ## 系统依赖

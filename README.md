@@ -4,11 +4,11 @@
 
 ## 本地开发
 
-需要 Node.js 18+ 和 pnpm。
+需要 Node.js 18+。
 
 ```bash
-pnpm install
-pnpm docs:dev
+npm install
+npm run docs:dev
 ```
 
 打开终端输出的本地地址。
@@ -16,8 +16,8 @@ pnpm docs:dev
 ## 构建
 
 ```bash
-pnpm docs:build
-pnpm docs:preview
+npm run docs:build
+npm run docs:preview
 ```
 
 构建产物位于：

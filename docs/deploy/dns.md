@@ -43,7 +43,7 @@ sudoedit /etc/lagran/dns.env
 关键项：
 
 ```ini
-DNS_LISTEN=0.0.0.0:8053
+DNS_LISTEN=0.0.0.0:53
 CONTROL_URL=http://<control-ip>:8080
 AGENT_TOKEN=<与 Control 一致>
 GEOIP_PATH=/var/lib/lagran/ip2region_v4.xdb
@@ -67,8 +67,8 @@ sudo systemctl status lagran-dns --no-pager
 ## 7. 测试
 
 ```bash
-dig @<dns-ip> -p 8053 cdn.example.com A
-dig @<dns-ip> -p 8053 cdn.example.com A +short
+dig @<dns-ip> cdn.example.com A
+dig @<dns-ip> cdn.example.com A +short
 ```
 
 返回应为 Edge 公网 IP，而不是 DNS 服务器 IP。

@@ -5,6 +5,9 @@ hero:
   name: Lagran CDN
   text: 企业级边缘加速与调度
   tagline: 从 Control、Edge、DNS 到缓存、WAF、GeoDNS，一份可落地的部署、使用与运维手册。
+  image:
+    src: /logo.svg
+    alt: Lagran CDN
   actions:
     - theme: brand
       text: 快速开始

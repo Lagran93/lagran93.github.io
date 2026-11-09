@@ -76,7 +76,7 @@ Country|Province|City|ISP|ISO-alpha2
 ## 验证
 
 ```bash
-dig @<dns-ip> -p 8053 cdn.example.com A +short
+dig @<dns-ip> cdn.example.com A +short
 ```
 
 返回应为 Edge 公网 IP，不是 DNS 服务器 IP。
