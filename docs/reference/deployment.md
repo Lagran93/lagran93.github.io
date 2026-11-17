@@ -1,10 +1,11 @@
 ---
-title: 部署手册
-description: Control、Edge、DNS、Caddy 的完整部署步骤与参数。
-outline: [2, 3]
+title: "完整部署手册"
 ---
 
-> 本文为完整原始文档，整理自主项目 `docs/deployment.md`。
+::: tip 自动同步
+本页由 `scripts/sync-reference.mjs` 从主仓库 `Lagran93/Lagran/docs` 同步生成，请勿在此手工修改。
+修改请提交到主仓库后重新执行 `npm run docs:sync`。
+:::
 
 # Lagran CDN 部署手册（Control → Edge → DNS）
 
@@ -331,6 +332,58 @@ dns.AGENT_TOKEN     = G
 edge.AGENT_TOKEN    = 该节点的 auth_token（安装命令自动带）
 ```
 
+### 4.3.1 升级前预建索引（大表必读）
+
+新版本为遥测表和节点表增加了索引。迁移本身可以正常运行，但 `CREATE INDEX` 会在
+`access_logs` / `waf_events` 上持写锁直到建完；这两张表在长期运行的环境里通常是全库最大的，
+千万级数据下可能阻塞写入数分钟到数十分钟。
+
+迁移脚本用的是 `CREATE INDEX IF NOT EXISTS`，所以**先在低峰期用 `CONCURRENTLY` 手工建好，
+迁移执行时就会直接跳过**，不产生锁。
+
+```bash
+psql "$DATABASE_URL" <<'SQL'
+-- 不阻塞读写；失败会留下 invalid 索引，见下方清理
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_access_logs_status_ts
+    ON access_logs (status, ts DESC);
+
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_waf_events_action_ts
+    ON waf_events (action, ts DESC);
+SQL
+```
+
+`CONCURRENTLY` 不能在事务块内运行，所以这里用 `psql` 直接执行，而不是包在 `BEGIN/COMMIT` 里。
+
+**如果中途失败**，会残留一个 `INVALID` 状态的索引，它不会被查询使用，但会阻塞后续 `IF NOT EXISTS`：
+
+```sql
+-- 检查
+SELECT indexrelid::regclass AS index, indisvalid
+FROM pg_index
+WHERE indexrelid::regclass::text IN ('idx_access_logs_status_ts','idx_waf_events_action_ts');
+
+-- 有 indisvalid = false 时先删掉再重建
+DROP INDEX CONCURRENTLY IF EXISTS idx_access_logs_status_ts;
+DROP INDEX CONCURRENTLY IF EXISTS idx_waf_events_action_ts;
+```
+
+#### `edge_nodes.name` 唯一索引
+
+这条**不建议预建**，因为迁移需要先把可能存在的重名节点改名，预建唯一索引会在有重名时失败。
+先确认没有重名即可（正常情况下不会有）：
+
+```bash
+psql "$DATABASE_URL" -c \
+  "select name, count(*) from edge_nodes group by name having count(*) > 1;"
+```
+
+若查询为空，迁移会顺利完成；若有结果，迁移会自动把较晚的节点改名为 `<name>~<n>`，
+升级后请到控制台确认并清理这些节点。
+
+> 提示：即使要预建，也**不要**用 `CONCURRENTLY` 建这个唯一索引。按 PostgreSQL 文档，
+> 唯一索引在并发构建的第二次扫描开始时就会对其他事务生效，构建若失败还会留下一个
+> 仍在强制唯一性的 `INVALID` 索引，清理起来比普通构建更麻烦。
+
 ### 升级顺序（重要）
 
 该版本开始，边缘接口不再接受全局 `AGENT_TOKEN`，也不会自动创建未知节点。升级时建议按以下顺序：
@@ -452,7 +505,7 @@ sudo systemctl disable --now nginx 2>/dev/null || true
 
 `/etc/caddy/Caddyfile`：
 
-```text
+```caddyfile
 {
     email admin@lagran.dev
 }
@@ -555,11 +608,36 @@ npm run generate
 
 ### 4.7 创建管理员
 
-登录控制台后注册自己的账号，然后提权：
+**这一步不能跳过。** `SEED_DEMO` 在 `REQUIRE_SECURE_SECRETS=true` 时会被拒绝启动，
+若库中没有任何账户，控制台将无人可登录。
+
+首次部署取账户的流程：**第一个注册的账号自动成为管理员**。
 
 ```bash
-psql "$DATABASE_URL" -c \
-  "UPDATE users SET role='admin' WHERE email='you@example.com';"
+# 1. 临时打开注册开关并重启
+sudo sed -i 's/^ALLOW_REGISTER=.*/ALLOW_REGISTER=true/' /etc/lagran/control.env
+sudo systemctl restart lagran-control
+
+# 2. 打开控制台注册你的账号（此时 captcha 若开启需一并完成）
+#    日志会打印：first account registered and granted admin; disable ALLOW_REGISTER now
+
+# 3. 立刻关掉注册开关并重启
+sudo sed -i 's/^ALLOW_REGISTER=.*/ALLOW_REGISTER=false/' /etc/lagran/control.env
+sudo systemctl restart lagran-control
+```
+
+规则：
+
+- **只在 `users` 表为空时生效**。库中已有任何账号时，新注册一律是普通 `user`，
+  不会覆盖或提权。
+- 判定与插入在同一条 SQL 内完成，多请求并发注册也只有一个成为管理员。
+- 第 3 步不能省：注册接口对外开放期间，任何能访问到端口的人都能抢先注册。
+
+**验证结果**：
+
+```bash
+psql "$DATABASE_URL" -c "SELECT email, role FROM users;"
+# 你的账号应为 admin
 ```
 
 确认新管理员可登录后，删除示例域名 `cdn.example.com`，并限制/删除 demo 账号。
@@ -719,12 +797,15 @@ RUST_LOG=edge=info,tower_http=warn
 | `DISK_CACHE_MAX_BYTES` | 否 | 1 GiB | 磁盘缓存上限；超出按 mtime 淘汰。 |
 | `CERT_DIR` | 否 | `./data/certs` | 证书持久化目录；边缘从控制面 `/certs/edge-sync` 拉取并落盘。 |
 | `TRUST_PROXY_HEADERS` | 否 | `false` | 是否信任前置可信代理的 `X-Forwarded-For` / `X-Forwarded-Proto`。为 `false` 时 Pingora 用真实对端 IP 覆盖客户端伪造值；只有边缘前面还有 SLB/Cloudflare 时才开启。 |
+| `CACHE_FLIGHT_TIMEOUT_MS` | 否 | `250` | 跨节点请求合并的单次 Redis 往返超时（毫秒），涵盖抢锁 `SET NX`、等锁 `EXISTS`、释放 `EVAL`。钳制 50–5000。Redis 不在本机时应调大；超时后降级为各节点独立回源并打印 `flight lock unavailable` 的 WARN。 |
+| `GEOIP_COUNTRY_DB` | Geo/ASN 名单必填 | `./data/maxmind/GeoLite2-Country.mmdb` | WAF 国家/地区名单使用的 MaxMind GeoLite2-Country 文件。需自行下载并定期更新；缺失时黑名单不生效、白名单 fail-closed（拦截全部流量）。启动时加载，更新后需重启 Edge。 |
+| `GEOIP_ASN_DB` | Geo/ASN 名单必填 | `./data/maxmind/GeoLite2-ASN.mmdb` | WAF ASN 名单使用的 GeoLite2-ASN 文件，行为同上。分发需遵守 MaxMind GeoLite2 EULA。 |
 | `CHALLENGE_SECRET` | 多节点必填 | 空 | WAF 质询 nonce/免质询 Cookie 的 HMAC 密钥。多节点必须一致；为空时用 `AGENT_TOKEN` 派生或进程随机（重启失效）。 |
 | `WAF_REPORT` | 否 | `true` | 是否上报 WAF 事件。 |
 | `WAF_REPORT_INTERVAL` | 否 | `5` | WAF 事件上报间隔（秒）。 |
 | `HEARTBEAT_INTERVAL` | 否 | `15` | 心跳间隔（秒）。控制面约 60 秒无心跳标记离线。 |
 | `CC_SYNC_INTERVAL` | 否 | `5` | 跨节点共享 CC 封禁拉取间隔（秒，最小 2）。 |
-| `RUST_LOG` | 否 | `info` | 日志级别。 |
+| `RUST_LOG` | 否 | `edge=debug,tower_http=info` | 日志级别。注意二进制自身的目标是 `lagran_edge`，只写 `edge=...` 会过滤掉它（启动摘要、CC 跨节点状态、优雅关闭都会消失，而 `edge::cache` 等库日志照常输出）。要看到全部，用 `lagran_edge=info,edge=info,tower_http=info`。 |
 
 ### 5.3 systemd
 
@@ -963,7 +1044,7 @@ sudo systemctl status lagran-dns --no-pager
 
 两台 DNS 都使用上面的 `DNS_NS_NAME` / `DNS_NS_IP` 列表。父 Zone 配置：
 
-```text
+```dns
 edge.lagran.net.      NS  ns1.edge.lagran.net.
 edge.lagran.net.      NS  ns2.edge.lagran.net.
 ns1.edge.lagran.net.  A   203.0.113.53

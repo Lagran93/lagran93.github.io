@@ -1,10 +1,11 @@
 ---
-title: GeoDNS 流程
-description: 从 DNS 查询到节点打分与 A 记录的完整流程。
-outline: [2, 3]
+title: "GeoDNS 流程"
 ---
 
-> 本文为完整原始文档，整理自主项目 `docs/geodns.md`。
+::: tip 自动同步
+本页由 `scripts/sync-reference.mjs` 从主仓库 `Lagran93/Lagran/docs` 同步生成，请勿在此手工修改。
+修改请提交到主仓库后重新执行 `npm run docs:sync`。
+:::
 
 # GeoDNS 边缘节点调度流程
 
@@ -43,19 +44,19 @@ outline: [2, 3]
 
 ### 2.1 客户域名 CNAME 到 Zone
 
-```text
+```dns
 cdn.example.com.  CNAME  edge.lagran.net.
 ```
 
 `test.akgo.net` 同理：
 
-```text
+```dns
 test.akgo.net.  CNAME  edge.akgo.net.
 ```
 
 ### 2.2 Zone 委派给 lagran-dns
 
-```text
+```dns
 edge.akgo.net.      NS  ns1.edge.akgo.net.
 edge.akgo.net.      NS  ns2.edge.akgo.net.
 
@@ -108,7 +109,7 @@ https://cdn.example.com/file.js
 
 客户域名配置：
 
-```text
+```dns
 cdn.example.com. CNAME edge.lagran.net.
 ```
 
@@ -426,7 +427,7 @@ ttl
 
 DNS 返回：
 
-```text
+```dns
 edge.lagran.net. 30 IN A 203.0.113.21
 ```
 

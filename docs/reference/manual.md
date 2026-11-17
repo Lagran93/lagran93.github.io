@@ -1,10 +1,11 @@
 ---
-title: 使用与调试手册
-description: 完整控制台使用、缓存机制、配置、排障手册。
-outline: [2, 3]
+title: "使用与调试手册"
 ---
 
-> 本文为完整原始文档，整理自主项目 `docs/manual.md`。
+::: tip 自动同步
+本页由 `scripts/sync-reference.mjs` 从主仓库 `Lagran93/Lagran/docs` 同步生成，请勿在此手工修改。
+修改请提交到主仓库后重新执行 `npm run docs:sync`。
+:::
 
 # Lagran CDN 使用与调试手册
 
@@ -14,17 +15,17 @@ outline: [2, 3]
 
 本文是面向部署、日常使用、排障和二次开发的综合手册。环境变量完整默认值仍以仓库根目录的四份示例文件为准：
 
-- [`control.env.example`](../control.env.example)
-- [`edge.env.example`](../edge.env.example)
-- [`dns.env.example`](../dns.env.example)
-- [`frontend.env.example`](../frontend.env.example)
+- [`control.env.example`](https://github.com/Lagran93/Lagran/blob/main/control.env.example)
+- [`edge.env.example`](https://github.com/Lagran93/Lagran/blob/main/edge.env.example)
+- [`dns.env.example`](https://github.com/Lagran93/Lagran/blob/main/dns.env.example)
+- [`frontend.env.example`](https://github.com/Lagran93/Lagran/blob/main/frontend.env.example)
 
 其他专题文档：
 
-- [架构说明](architecture.md)
-- [部署手册](deployment.md)
-- [开发指南](development.md)
-- [GeoDNS 说明](geodns.md)
+- [架构说明](https://github.com/Lagran93/Lagran/blob/main/docs/architecture.md)
+- [部署手册](https://github.com/Lagran93/Lagran/blob/main/docs/deployment.md)
+- [开发指南](https://github.com/Lagran93/Lagran/blob/main/docs/development.md)
+- [GeoDNS 说明](https://github.com/Lagran93/Lagran/blob/main/docs/geodns.md)
 
 ---
 
@@ -97,6 +98,7 @@ lagran-dns:53（权威 DNS）── /api/v1/schedule → lagran-control
 | `/var/lib/lagran/certs` | 边缘证书 |
 | `/var/lib/lagran/cache` | 普通磁盘缓存（`CACHE_BACKEND=disk/hybrid`） |
 | `/var/lib/lagran/large-cache` | 大对象缓存 |
+| `/var/lib/lagran/maxmind` | 建议的 WAF Geo/ASN 数据库目录（用 `GEOIP_*_DB` 指向） |
 
 systemd 服务：
 
@@ -187,7 +189,7 @@ demo@lagran.dev / demo123
 
 生产环境必须：
 
-```ini
+```env
 SEED_DEMO=false
 REQUIRE_SECURE_SECRETS=true
 JWT_SECRET=<至少 32 字节随机值>
@@ -228,7 +230,7 @@ token_error          令牌签发失败
 
 登录日志保存于 `login_logs` 表，默认保留 30 天。调整：
 
-```ini
+```env
 LOG_RETENTION_DAYS=90
 ```
 
@@ -425,10 +427,102 @@ no_store  当前实现按请求阶段非 cache 处理：回源且不写入缓存
 - CORS 允许来源
 - 防盗链 Referer
 - 自定义响应头
-- Origin Shield 地址
+- Origin Shield 地址（管理员配置白名单，域名下拉选择）
 - CC 防御
+
+> 跨节点 CC 依赖 `REDIS_URL`。单次 Redis 往返超过 `CC_REDIS_TIMEOUT_MS`（默认 50ms）时，该次检查会回退到单机预算，以避免 Redis 故障拖慢请求路径。周期报告按**增量**统计：只有回退比例 ≥5% 或出现 Redis 错误时才打 `WARN`；少量尾延迟只会在 `debug` 日志中出现。历史上单次超时会导致每分钟永久 `WARN`，该问题已修复。
+>
+> 客户端已启用 `TCP_NODELAY`：未开启时 Nagle + delayed ACK 会给小请求偶尔叠加约 40ms，`redis-cli --latency`（默认开启 nodelay）看起来正常而 Edge 却会超时。若升级后仍偶发超时，再考虑调大 `CC_REDIS_TIMEOUT_MS`。
 - 源站池/备用源站
 - 每个源站可独立配置 TLS SNI、回源 Host
+
+#### Origin Shield 配置
+
+管理员先在「系统 → Shield 节点」维护平台允许的 Shield 地址；域名高级设置只能从该列表中选择，不能直接输入任意 URL。
+
+后端会校验：
+
+- 只能选择启用中的 Shield 节点；
+- 未登记/已停用的地址不能保存；
+- 被域名引用的节点不能停用或删除。
+
+完整的部署步骤、TLS/Host 要求、部署顺序、验证、高可用和故障排查见
+[Origin Shield 配置](<Origin Shield配置.md>)。
+
+推荐架构：
+
+```text
+普通 Edge
+  → 本地大缓存命中则直接返回
+  → 未命中则向 Origin Shield 请求
+  → Shield 命中则返回
+  → Shield 未命中才回源
+```
+
+**Shield 节点配置**
+
+在专用 Shield Edge 的 `/etc/lagran/edge.env`：
+
+```env
+LARGE_CACHE_ENABLED=true
+LARGE_CACHE_DIR=/var/lib/lagran/large-cache
+LARGE_CACHE_MAX_BYTES=21474836480
+LARGE_CACHE_MIN_FREE_BYTES=1073741824
+LARGE_CACHE_FILL_QUEUE_TOTAL_BYTES=268435456
+
+# 仅 Shield 节点开启
+EDGE_SHIELD_DISABLED=true
+```
+
+普通 Edge 保持：
+
+```env
+EDGE_SHIELD_DISABLED=false
+```
+
+**控制台配置**
+
+```text
+域名列表 → 目标域名 → 高级设置 → Origin Shield 地址
+```
+
+填写 Shield 的内部地址：
+
+```text
+https://shield-s1.internal.example.com
+```
+
+要求：
+
+- 普通 Edge 能访问该地址，但公网不能访问；
+- Shield 仍收到公开业务域名 Host，必须能按该域名路由；
+- Shield 的证书/SNI 匹配内部地址；
+- Shield 自身不要把 `shield_url` 指回自己；
+- `EDGE_SHIELD_DISABLED=true` 只让 Shield 节点忽略域名上的 Shield 地址，避免 miss 自环；普通 Edge 仍会使用它；
+- Shield 故障时，普通 Edge 按既有源站池顺序回退；
+- 建议按区域部署多个 Shield，并在前面放内部负载均衡。
+
+> 如果 `shield_url` 指向 Lagran Edge 集群，但 Shield 节点没有设置 `EDGE_SHIELD_DISABLED=true`，Shield 的缓存 miss 可能再次请求自己，形成回源环。
+
+验证：
+
+```bash
+# 普通 Edge 冷请求，应由 Shield 提供，不应直接命中源站
+curl -I -H 'Range: bytes=0-1023' https://cdn.example.com/file.bin
+
+# Shield 节点访问日志中应出现对应请求
+journalctl -u lagran-edge -f
+```
+
+监控 Shield：
+
+```text
+lagran_large_cache_fs_available_bytes
+lagran_large_cache_fs_reserved_bytes
+lagran_large_cache_fs_admission_headroom_bytes
+lagran_edge_chunk_fill_drops_total
+lagran_edge_chunk_fill_drop_budget_total
+```
 
 开启 CC 后：
 
@@ -446,6 +540,7 @@ no_store  当前实现按请求阶段非 cache 处理：回源且不写入缓存
 - 托管规则集：OWASP 核心防护、注入扩展防护、SSRF/XXE 防护、扫描器与协议基线
 - 自定义规则：路径、Query、UA、Referer、Method、请求头、IP
 - IP 黑白名单：支持单 IP 与 CIDR
+- Geo/ASN 黑白名单：按国家/地区（ISO 3166-1 两位代码）与 ASN 控制访问，见下方「Geo/ASN 黑白名单」
 - 安全级别：低/中/高/攻击中
 - 共享封禁：跨 Edge 自动封禁、手动 IP/CIDR 封禁、解封、24h 统计
 - 事件列表：block/challenge/monitor/log
@@ -481,6 +576,9 @@ WAF 目前不读取请求体（在代理读取 body 前执行），GET/HEAD 的 
 GET  /api/v1/waf/rulesets
 GET  /api/v1/domains/{id}/waf
 PUT  /api/v1/domains/{id}/waf
+GET  /api/v1/domains/{id}/waf/geo
+POST /api/v1/domains/{id}/waf/geo
+DELETE /api/v1/waf/geo/{rule_id}
 ```
 
 `PUT` 请求新增：
@@ -499,6 +597,121 @@ explicit category switches OR ruleset categories
 
 因此规则集升级时，只要新增类别，域名会自动获得新增签名，不需要重新保存设置。
 因此规则集升级时，只要新增类别，域名会自动获得新增签名，不需要重新保存设置。
+
+#### Geo/ASN 黑白名单
+
+按域名维护国家/地区与 ASN 两类规则，每类各有白名单与黑名单。判定在 Edge 本地完成，不产生外部查询。
+
+数据来源是 MaxMind GeoLite2 数据库：
+
+```text
+GEOIP_COUNTRY_DB   默认 ./data/maxmind/GeoLite2-Country.mmdb
+GEOIP_ASN_DB       默认 ./data/maxmind/GeoLite2-ASN.mmdb
+```
+
+**策略优先级**（与 WAF 其他检查的先后关系）：
+
+```text
+1. IP 白名单      命中即放行，短路全部检查（保持原有语义，Geo/ASN 也在其内）
+2. IP 黑名单      命中即拦截
+3. Geo/ASN 黑名单  国家/地区或 ASN 命中任一即拦截，优先于白名单
+4. Geo/ASN 白名单  仅当配置了白名单时生效：命中任一国家/地区或 ASN 才通过这一层
+5. 托管规则 / 自定义规则 / 安全级别   照常执行
+```
+
+关键语义：
+
+- **Geo/ASN 白名单不是全局放行**。它只是“能否进入后续 WAF 检查”的门槛，命中后仍会继续执行托管规则、
+  自定义规则与安全级别质询。这一点与 IP 白名单不同，不要混用。
+- **黑名单优先于白名单**。同一条规则同时命中白名单与黑名单时按黑名单处理。
+- 国家/地区代码统一大写，`cn` 与 `CN` 等价；ASN 可写 `13335` 或 `AS13335`。
+- 判定使用 Edge 已解析出的**可信客户端 IP**：`TRUST_PROXY_HEADERS=true` 时取 `X-Forwarded-For` 中
+  的可信地址，否则取连接对端地址。不会直接信任请求里自带的头。
+
+#### IP 与 Geo/ASN 的九种组合
+
+下面的“Geo/ASN 状态”是指**在 Geo/ASN 黑名单优先处理之后**的有效结果：
+
+- **黑名单**：客户端命中了任一国家/地区黑名单或 ASN 黑名单。即使同时命中白名单，也按黑名单处理。
+- **白名单**：客户端没有命中 Geo/ASN 黑名单，且命中了任一国家/地区白名单或 ASN 白名单。
+- **既不是黑名单也不是白名单**：没有命中任何 Geo/ASN 规则。若域名配置了 Geo/ASN 白名单，
+  这仍然不能通过白名单门槛；只有未配置任何 Geo/ASN 白名单时，才表示 Geo/ASN 层不限制该客户端。
+
+同理，“IP 状态”按客户端可信 IP 分类：命中 IP 黑名单、命中 IP 白名单、或两者都未命中。
+如果同一个 IP 同时出现在 IP 黑名单和 IP 白名单中，实际顺序是 **IP 白名单先短路放行**，
+因此它按 IP 白名单处理（这是 IP 白名单原有语义，与 Geo/ASN 的“黑名单优先”不同）。
+
+| IP 状态 \ Geo/ASN 状态 | 命中 Geo/ASN 黑名单 | 命中 Geo/ASN 白名单 | 两者都未命中 |
+|---|---|---|---|
+| **命中 IP 黑名单** | **拦截**：IP 黑名单在 Geo/ASN 之前命中，后续 Geo/ASN 不再判断。 | **拦截**：Geo/ASN 白名单不能覆盖 IP 黑名单。 | **拦截**：IP 黑名单直接拦截。 |
+| **命中 IP 白名单** | **放行**：IP 白名单短路全部检查，Geo/ASN 黑名单也不会执行。 | **放行**：同样短路全部检查。 | **放行**：同样短路全部检查。 |
+| **IP 既非黑名单也非白名单** | **拦截**：Geo/ASN 黑名单命中，优先于 Geo/ASN 白名单。 | **通过 Geo/ASN 层**：但这不是最终放行，仍继续执行托管规则、自定义规则、安全级别、质询等后续 WAF 检查。 | **分两种情况**：未配置 Geo/ASN 白名单时通过 Geo/ASN 层并继续后续 WAF；已配置 Geo/ASN 白名单但未命中时，**拦截**（白名单门槛 fail-closed）。 |
+
+因此，严格按最终结果看，九种情况可以归纳为：
+
+1. **IP 白名单的三种组合（第 2 行）全部直接放行**，不执行 IP 黑名单、Geo/ASN、托管规则或其他后续检查。
+2. **IP 黑名单的三种组合（第 1 行）全部拦截**，不会因为命中 Geo/ASN 白名单而放行。
+3. **IP 两者都未命中的三种组合（第 3 行）**：Geo/ASN 黑名单命中则拦截；Geo/ASN 白名单命中则只是进入后续 WAF；Geo/ASN 无命中时取决于是否配置了 Geo/ASN 白名单。
+
+#### 请求示例
+
+假设域名配置如下：
+
+```text
+IP 黑名单：      198.51.100.10
+IP 白名单：      203.0.113.10
+国家黑名单：     KP
+国家白名单：     CN
+ASN 白名单：     AS13335
+```
+
+- `198.51.100.10`：无论国家是 `CN`、`KP` 还是其他国家，先命中 IP 黑名单，**拦截**。
+- `203.0.113.10`：无论国家是 `KP`、ASN 是否为 `AS13335`，先命中 IP 白名单，**直接放行**。
+- 一个可信 IP 不在任何 IP 名单，且国家为 `KP`：命中 Geo/ASN 黑名单，**拦截**。
+- 一个可信 IP 不在任何 IP 名单，且国家为 `CN`：命中 Geo/ASN 白名单，**通过 Geo/ASN 层**，
+  但仍可能被 SQLi、XSS、自定义规则或安全级别拦截/质询。
+- 一个可信 IP 不在任何 IP 名单，且国家既不是 `KP` 也不是 `CN`，同时 ASN 也不是 `AS13335`：
+  因为域名配置了 Geo/ASN 白名单，未命中白名单，**拦截**。
+- 如果删除所有 Geo/ASN 白名单，仅保留国家 `KP` 黑名单，那么最后一种客户端不会被 Geo/ASN 层拦截，
+  会继续进入后续 WAF；它仍可能被其他 WAF 规则拦截。
+
+**数据库缺失时的行为**（文件不存在或不可读取）：Country 与 ASN 数据库独立加载，影响范围按缺失的库分别计算：
+
+- Country 库缺失：国家/地区黑名单无法命中；配置了国家白名单时，国家维度无法提供命中，
+  但 ASN 白名单仍可命中并通过 Geo/ASN 门槛。
+- ASN 库缺失：ASN 黑名单无法命中；配置了 ASN 白名单时，ASN 维度无法提供命中，
+  但国家/地区白名单仍可命中并通过 Geo/ASN 门槛。
+- 两个库都缺失：Geo/ASN 黑名单都无法命中；若配置了任一 Geo/ASN 白名单，因没有国家或 ASN
+  数据可供匹配，未命中白名单门槛的请求会被拦截。若没有配置 Geo/ASN 白名单，Geo/ASN 层不拦截，
+  请求仍继续经过其他 WAF 检查。
+- IP 黑白名单及其他 WAF 规则不依赖 MaxMind 数据库，照常生效。
+
+缺库不会让 Edge 崩溃；每个无法加载的数据库会记录告警。数据库在 Edge 启动时加载，替换或修复文件后
+需重启 Edge 进程重新加载。
+
+数据库需自行定期更新（GeoLite2 每周更新），并遵守 MaxMind GeoLite2 EULA 的分发与署名要求；
+不要把 mmdb 提交到公开仓库或对外提供下载。
+
+可用接口：
+
+```http
+GET    /api/v1/domains/{id}/waf/geo
+POST   /api/v1/domains/{id}/waf/geo
+DELETE /api/v1/waf/geo/{rule_id}
+```
+
+`POST` 请求体：
+
+```json
+{
+  "kind": "country_deny",
+  "value": "KP",
+  "note": "高风险来源"
+}
+```
+
+`kind` 取值：`country_allow`、`country_deny`、`asn_allow`、`asn_deny`。
+同域名、同类型、同值重复提交会返回 400。
 
 ### 签名规则包、缓存与灰度
 
@@ -809,7 +1022,7 @@ DSL 仍然只检查 path/query/UA/Referer/Method/Header/IP，不读取请求体�
 1. 「边缘节点 → 新增节点」，记录只展示一次的节点令牌。
 2. 在 Edge 服务器配置：
 
-```ini
+```env
 NODE_ID=edge-01
 AGENT_TOKEN=<节点令牌>
 CONTROL_URL=https://control.example.com
@@ -958,6 +1171,7 @@ Control 的 CONTROL_PUBLIC_URL
 | `CC_SYNC_INTERVAL` | 共享封禁同步间隔 |
 | `REDIS_URL` | CC 滑动窗口与普通域名限流共享 |
 | `CC_REDIS_PREFIX` | CC Redis key 前缀 |
+| `CC_REDIS_TIMEOUT_MS` | 单次跨节点 CC Redis 往返预算，默认 50ms；局域网 Redis 通常无需调整，跨地域链路需调大或接受回退到单机预算 |
 | `RATE_LIMIT_REDIS_PREFIX` | 普通限流 Redis key 前缀 |
 | `CACHE_TTL` | 默认缓存 TTL |
 | `CACHE_BACKEND` | `memory` / `disk` / `hybrid` / `redis` / `l2`；`redis` 与 `l2` 当前等价，均启用本地 MemoryCache + Redis L2 |
@@ -972,7 +1186,12 @@ Control 的 CONTROL_PUBLIC_URL
 | `CACHE_L2_READ_TIMEOUT_MS` | Redis L2 读超时，默认 250ms；跨区域时适当增大 |
 | `ORIGIN_READ_TIMEOUT_MS` | 回源读取空闲超时，默认 30000；流媒体不会因总时长被中断 |
 | `ORIGIN_STREAM_READ_TIMEOUT_MS` | Range/流媒体的回源读取空闲超时，默认 120000；避免视频首字节慢导致 504 |
-| `RANGE_FILL_MAX_BYTES` | 单次 Range 写入大缓存的上限，默认 32 MiB；开放式缓存前缀，后缀缓存尾部 |
+| `RANGE_FILL_MAX_BYTES` | 预热任务单次 Range 前缀上限，默认 32 MiB；不再限制客户端 Range 的完整对象填充 |
+| `LARGE_CACHE_FILL_MAX_BYTES` | 单对象填充上限，0 表示使用 `LARGE_CACHE_MAX_OBJECT_BYTES` |
+| `LARGE_CACHE_CHUNK_BYTES` | Range 固定分片大小，默认 1 MiB；缺失分片才回源 |
+| `LARGE_CACHE_FILL_QUEUE_BYTES` | 单个 fill 写盘队列上限，默认 128 MiB |
+| `LARGE_CACHE_FILL_QUEUE_TOTAL_BYTES` | 所有 fill 队列总预算，默认 256 MiB |
+| `LARGE_CACHE_MIN_FREE_BYTES` | 大缓存文件系统保留空闲空间，默认 1 GiB |
 | `DOWNSTREAM_KEEPALIVE_SECS` | 下游 HTTP/1.1 keepalive 空闲超时，默认 60 |
 | `DOWNSTREAM_H2_IDLE_SECS` | 下游 HTTP/2 空闲超时，默认 120 |
 | `DOWNSTREAM_KEEPALIVE_REQUESTS` | 单连接最大请求数，默认 1000 |
@@ -988,6 +1207,8 @@ Control 的 CONTROL_PUBLIC_URL
 | `CC_BEHAVIOR_ENABLED` | 行为评分开关 |
 | `CC_BEHAVIOR_SCORE` | 行为评分阈值 |
 | `TRUST_PROXY_HEADERS` | 是否信任前置代理 XFF |
+| `GEOIP_COUNTRY_DB` | WAF Geo 名单使用的 GeoLite2-Country 路径，默认 `./data/maxmind/GeoLite2-Country.mmdb` |
+| `GEOIP_ASN_DB` | WAF ASN 名单使用的 GeoLite2-ASN 路径，默认 `./data/maxmind/GeoLite2-ASN.mmdb` |
 | `ACCESS_LOG_*` | 访问日志路径/JSON/缓冲/上报 |
 | `RUST_LOG` | 日志级别 |
 
@@ -1093,7 +1314,7 @@ CACHE_REDIS_URL
 
 可以使用不同 Redis 逻辑库：
 
-```ini
+```env
 REDIS_URL=redis://10.0.0.20:6379/0
 CACHE_REDIS_URL=redis://10.0.0.20:6379/1
 ```
@@ -1118,7 +1339,7 @@ Redis 的 `maxmemory` 和淘汰策略是**实例级**的，不是 DB 级。缓�
 
 #### 配置示例
 
-```ini
+```env
 CACHE_BACKEND=redis
 CACHE_REDIS_URL=redis://10.0.0.20:6379/0
 CACHE_REDIS_PREFIX=lagran:cache
@@ -1132,7 +1353,7 @@ CACHE_L2_READ_TIMEOUT_MS=250
 
 TLS / 密码：
 
-```ini
+```env
 CACHE_REDIS_URL=rediss://:password@redis-l2.internal:6379/0
 ```
 
@@ -1388,7 +1609,7 @@ POST /api/v1/domains/{id}/signed-url
 
 ### 4.5 前端
 
-```ini
+```env
 NUXT_PUBLIC_API_BASE=
 ```
 
@@ -1647,321 +1868,599 @@ Pragma: no-cache
 
 启用大缓存：
 
-```ini
+```env
 LARGE_CACHE_ENABLED=true
 LARGE_CACHE_DIR=/var/lib/lagran/large-cache
 LARGE_CACHE_MIN_OBJECT_BYTES=8388608
 LARGE_CACHE_MAX_OBJECT_BYTES=1073741824
 LARGE_CACHE_MAX_BYTES=21474836480
+# 0 = 使用 LARGE_CACHE_MAX_OBJECT_BYTES
+LARGE_CACHE_FILL_MAX_BYTES=0
+LARGE_CACHE_CHUNK_BYTES=1048576
+LARGE_CACHE_FILL_QUEUE_BYTES=134217728
+LARGE_CACHE_FILL_QUEUE_TOTAL_BYTES=268435456
+LARGE_CACHE_MIN_FREE_BYTES=1073741824
 ```
 
 大缓存写入要求：
 
 - 完整对象：状态码 `200`、存在 `Content-Length`、对象大小在 `LARGE_CACHE_MIN_OBJECT_BYTES .. LARGE_CACHE_MAX_OBJECT_BYTES` 范围内
-- Partial Range：源站返回 `206`、`Content-Range`、`Content-Length`；对象总大小可以超过 `LARGE_CACHE_MAX_OBJECT_BYTES`，只要单次缓存窗口不超过 `RANGE_FILL_MAX_BYTES`
+- Partial Range：源站返回 `206`、`Content-Range`、`Content-Length`；对象总大小可以超过 `LARGE_CACHE_MAX_OBJECT_BYTES`，填充量由 `LARGE_CACHE_FILL_MAX_BYTES` 和磁盘预算限制
 - 响应可缓存：无 `Set-Cookie`、无 `no-store/private`、`Vary` 受支持
 - 请求没有触发 Cookie/Authorization/no-store bypass
 - 磁盘目录可写、容量足够
 
-### 5.8 Partial Range
+### 5.8 Partial Range（固定分片）
 
-流程：
+大对象 Range 缓存以固定分片为单位，默认：
 
-```text
-Range 请求
-  → 大缓存有覆盖该区间的 segment？
-      ├─ 有：HIT，直接读磁盘返回 206
-      └─ 无：透传源站 206
-             → 后台按分段写入稀疏 .data
-             → 只提交完整收到的字节段
-             → 更新 segments
+```env
+LARGE_CACHE_CHUNK_BYTES=1048576
+LARGE_CACHE_FILL_QUEUE_BYTES=134217728
+LARGE_CACHE_FILL_QUEUE_TOTAL_BYTES=268435456
+LARGE_CACHE_MIN_FREE_BYTES=1073741824
 ```
 
-第一次通常：
-
-```http
-HTTP/1.1 206 Partial Content
-X-Cache: BYPASS
-X-Lagran-Cache-Reason: range-fill
-```
-
-等待后台提交后第二次相同 Range：
-
-```http
-HTTP/1.1 206 Partial Content
-X-Cache: HIT
-```
-
-元数据：
+对象被切成等长分片（最后一片可以更短）。只有**完整覆盖一个分片**时，该分片才算已缓存：
 
 ```json
 {
-  "content_length": 748814277,
+  "content_length": 104857600,
   "complete": false,
-  "segments": [[0, 33554431], [734003200, 748814276]]
+  "segments": [[0, 1048575], [1048576, 2097151]]
 }
 ```
 
-这里表示：
-
-```text
-已缓存前 32 MiB
-已缓存最后约 14 MiB
-中间未缓存
-```
-
-开放式 Range 只缓存前缀，后缀 Range 只缓存尾部；带明确范围且不超过 `RANGE_FILL_MAX_BYTES` 的 Range 会缓存完整区间。客户端断开时，已经完整落盘的前缀仍会保留，但 `complete` 保持 `false`。
-
-同一对象同时只允许一个 Range 写入者，避免多个请求并发写同一个稀疏 `.data` 文件导致元数据交错。
-
-要求：
-
-- 源站返回 `206 + Content-Range`
-- 单段 Range
-- 对象大小满足大缓存阈值
-- 响应可缓存（Vary/Cache-Control/Set-Cookie 等通过）
-- 请求无 `If-Range`、无普通 Cookie/Authorization/no-store
-
-Partial 对象不能响应完整 GET。完整 GET 需要：
+相邻的已缓存分片会合并成一个连续 segment；例如：
 
 ```json
-"complete": true
+"segments": [[0, 7340031]]
 ```
 
-#### 稀疏文件与 `ls` 显示大小
+表示 7 个完整的 1 MiB 分片（`7 * 1048576 - 1`），不是没有按分片缓存。分片之间不连续时会保留多个 segment，例如 `[[0,1048575],[2097152,3145727]]`。
 
-大缓存 `.data` 文件使用稀疏文件：
+请求 `[s, e]` 的计划：
 
 ```text
-逻辑长度 = content_length
-实际磁盘块 = 已写入 segment 覆盖的字节
+1. 找到 s 所在分片和 e 所在分片；
+2. 每个分片独立判断完整覆盖：
+     已缓存 → 读磁盘
+     缺失   → 加入缺失分片区间
+3. 相邻缺失分片合并成一个 origin Range 请求；
+4. 每个 origin 请求获取完整分片，只把客户端请求范围内的字节下发；
+5. 回源字节同时写入缓存；连接中断时只提交已经完整写入的分片。
 ```
 
-因此：
+效果：
 
-```bash
-ls -la 27557ef1a93d2e85.data
-```
+- 请求中间已缓存的分片不会重复回源；
+- 只请求缺失分片，而不是整个客户端 Range；
+- 客户端请求首尾落在分片中间时，会多取最多一个分片的前缀/后缀，用于补齐整个分片；
+- 多个不连续的缺失分片会产生多个 origin Range 请求，每个都只覆盖缺失分片；
+- 当所有分片都覆盖后，`complete=true`，后续请求纯 L3 命中。
 
-显示的：
+首次请求如果没有缓存，会从客户端起点向下对齐到分片边界开始获取，并把客户端起点之前的少量字节跳过（不发给客户端），这样第一个分片也是完整的。
+
+`LARGE_CACHE_FILL_MAX_BYTES` 控制单对象最多填充分片；默认 `0` 表示使用 `LARGE_CACHE_MAX_OBJECT_BYTES`。
+
+同一对象同一时间只允许一个填充 writer；其他请求读取已提交分片，缺失分片回源但不重复写盘。
+
+生产加固：
+
+- 每个 fill 队列默认上限 128 MiB，进程全局 fill 队列默认 256 MiB；可通过 `LARGE_CACHE_FILL_QUEUE_BYTES` / `LARGE_CACHE_FILL_QUEUE_TOTAL_BYTES` 调整，运行时总预算取 max(总预算, 单 fill 上限)。超过时丢弃后续写盘，客户端响应不受影响。
+- 分片 writer 在开始前先做磁盘字节预留：used_bytes（已提交 + 活跃预留）<= LARGE_CACHE_MAX_BYTES 是硬上限；同时检查文件系统可用空间，必须保留 `LARGE_CACHE_MIN_FREE_BYTES`。文件系统空间不足时先按 LRU 驱逐缓存对象，仍不足则放弃填充而不是超限写入。
+- 一个请求最多处理 16 个不连续的缺失分片区间；超过时回退首次 Range 填充路径，避免请求变成几十/上百个源站连接。
+- 正在写入或读取的对象会被 pin 住，LRU 驱逐会跳过它，避免 data/meta 被删后 writer 又提交半个对象。
+- 手动分片回源按 origin 健康度/优先级/权重依次 failover；网络错误、超时、非 206 会尝试下一个源站，ETag/Content-Range/编码不匹配也不会盲目拼接。
+- 首次后缀 Range（`bytes=-N`）先用 HEAD 探测对象总长度，再把后缀起点换算成普通 Range 进入分片路径；源站不支持 HEAD 时用 `bytes=0-0` 探测。
+- 分片写入只提交完整分片；客户端中断时正在写的半个分片丢弃。
+- 监控项：lagran_edge_chunk_requests_total、lagran_edge_chunk_origin_runs_total、lagran_edge_chunk_fallbacks_total、lagran_edge_chunk_fill_drops_total、lagran_edge_chunk_fill_dropped_bytes_total、lagran_edge_chunk_fill_drop_queue_total、lagran_edge_chunk_fill_drop_budget_total、lagran_edge_chunk_fill_drop_send_total、lagran_edge_chunk_fill_rejects_total、lagran_edge_chunk_fill_rejected_bytes_total、lagran_edge_chunk_origin_attempts_total、lagran_edge_chunk_origin_failures_total；容量水位：lagran_large_cache_used_bytes、lagran_large_cache_available_bytes、lagran_large_cache_capacity_bytes、lagran_large_cache_fs_available_bytes、lagran_large_cache_fs_reserved_bytes、lagran_large_cache_fs_admission_headroom_bytes、lagran_large_cache_min_free_bytes。
+
+#### 5.8.1 Fill 队列预算
+
+`LARGE_CACHE_FILL_QUEUE_BYTES` 和 `LARGE_CACHE_FILL_QUEUE_TOTAL_BYTES` 控制的是 edge 在“源站/客户端 → 磁盘 writer”之间允许缓冲多少在途数据。它们不是磁盘缓存容量，也不是单对象填充上限。
 
 ```text
-748814277
+origin/client
+     │
+     ▼
+ RangeSink / RangeFillSink
+     │  每个 fill 一个内存队列
+     │  ← LARGE_CACHE_FILL_QUEUE_BYTES 限制单个队列
+     ▼
+ RangeWriter（后台 writer）
+     │
+     ▼
+稀疏 .data + .meta.json
 ```
 
-是**逻辑长度**，不是实际磁盘占用。
+所有 fill 队列的已预留字节合计受 `LARGE_CACHE_FILL_QUEUE_TOTAL_BYTES` 限制。
 
-目录中的 `total` 更能反映实际块占用，例如：
+| 参数 | 作用域 | 限制对象 | 默认值 |
+|---|---|---|---|
+| `LARGE_CACHE_FILL_QUEUE_BYTES` | 单个 fill worker | 一个 `RangeSink` / `RangeFillSink` 队列中等待写盘的字节 | 128 MiB |
+| `LARGE_CACHE_FILL_QUEUE_TOTAL_BYTES` | 整个 edge 进程 | 所有活跃 fill 队列的预留字节总和 | 256 MiB |
+
+单个 fill 的处理流程：
+
+- 源站数据先进入 fill 队列；
+- 后台 `RangeWriter` 从队列取 chunk 写入稀疏文件；
+- 磁盘速度低于数据到达速度时，队列增长；
+- 超过单 fill 上限后，停止该 fill 的后续写盘；
+- 队列中已经写入的部分仍然提交。
+
+全局预算防止多个并发 fill 同时增长：
 
 ```text
-total 4768
+请求 A：40 MiB 队列
+请求 B：90 MiB 队列
+请求 C：80 MiB 队列
+...
+所有预留合计 <= LARGE_CACHE_FILL_QUEUE_TOTAL_BYTES
 ```
 
-约等于：
+默认的 128 MiB / 256 MiB 最坏情况下大约只能容纳两个接近满队列的大 fill；第三个 fill 会提前丢弃后续字节。
+
+##### 不是单对象缓存上限
+
+`LARGE_CACHE_FILL_QUEUE_BYTES` 是**在途缓冲上限**，不是单个对象最多缓存多少。
+
+只要磁盘跟得上：
 
 ```text
-segments 覆盖的字节数
-+ 文件系统块开销
+1 GiB 对象
+→ 队列可能长期只有几 MiB
+→ writer 持续消费
+→ 最终可以缓存完整 1 GiB
 ```
 
-检查实际占用：
+单对象最多写多少由 `LARGE_CACHE_FILL_MAX_BYTES` 控制。
 
-```bash
-du -h 27557ef1a93d2e85.data
-du -h --apparent-size 27557ef1a93d2e85.data
-ls -lsh 27557ef1a93d2e85.data
-stat -c 'size=%s blocks=%b block_size=%B' 27557ef1a93d2e85.data
-```
+##### 不是磁盘硬上限
 
-示例：
+两个上限属于不同的资源维度：
 
 ```text
-size     = 748814277   逻辑大小
-blocks   = 已分配的 512B 块数量
-实际字节 ≈ blocks × 512
+FILL_QUEUE_*          → 内存中的在途字节
+LARGE_CACHE_MAX_BYTES → 磁盘上已提交 + 预留的逻辑字节
 ```
 
-不要把 `.data` 文件复制成非稀疏文件；备份时使用：
+即使队列很小，磁盘缓存仍可能写满；即使磁盘还有空间，队列也可能因为内存预算先丢弃。
 
-```bash
-cp --sparse=always
-rsync --sparse
-tar --sparse
-```
-
-否则会实际占用完整逻辑大小。
-
-### 5.9 视频 Range 与 504 优化
-
-Chrome、DPlayer 等播放器常见的请求：
-
-```http
-Range: bytes=0-
-```
-
-这种开放式 Range 表示“从 0 到文件末尾”。
-
-Edge 的策略：
+磁盘水位看：
 
 ```text
-开放式 Range
-  → 客户端继续从源站边下边播
-  → 同时只把前 N 字节写入大缓存
-  → 不等待整个视频下载完成
+lagran_large_cache_used_bytes
+lagran_large_cache_available_bytes
+lagran_large_cache_capacity_bytes
+```
+
+队列丢弃看：
+
+```text
+lagran_edge_chunk_fill_drops_total
+lagran_edge_chunk_fill_dropped_bytes_total
+```
+
+不要用 `large_cache_available_bytes` 判断 fill 队列是否满。
+
+##### 文件系统剩余空间
+
+`LARGE_CACHE_MAX_BYTES` 只限制逻辑字节，不能保证缓存目录所在文件系统还有空间。Edge 在 writer 开始前额外做一次文件系统准入检查。
+
+新增配置：
+
+```env
+# 大缓存文件系统必须保留的空闲空间，默认 1 GiB
+LARGE_CACHE_MIN_FREE_BYTES=1073741824
+```
+
+检查方式：
+
+```text
+statvfs(LARGE_CACHE_DIR)
+available = f_bavail * f_frsize
+```
+
+一次 fill 需要同时满足：
+
+```text
+1. used_bytes + reservation <= LARGE_CACHE_MAX_BYTES
+2. fs_available - fs_reserved >= LARGE_CACHE_MIN_FREE_BYTES + reservation
+```
+
+其中：
+
+- `used_bytes`：已提交 + 活跃 writer 的逻辑预留；
+- `fs_reserved_bytes`：活跃 writer 针对文件系统空闲空间做的预留；
+- `available`：当前对 edge 运行用户可用的文件系统空闲字节。
+
+最终准入时任一条件仍不满足：
+
+- 不创建 writer；
+- 不写入缓存；
+- 客户端响应不受影响；
+- 丢弃量计入 `lagran_edge_chunk_fill_drops_total` / `lagran_edge_chunk_fill_dropped_bytes_total`。
+
+文件系统准入检查先于本次写入。空间不足时，先按 LRU 驱逐一批已缓存对象释放实际空间；驱逐后仍低于 `LARGE_CACHE_MIN_FREE_BYTES` 才拒绝本次 fill。驱逐受 victim budget 限制，不会因为一次写入把整个缓存清空。
+
+##### 预留而不是预分配
+
+文件系统预留是计数器：
+
+```text
+writer 开始前：fs_reserved += reservation
+writer 提交/中止：fs_reserved -= reservation
+```
+
+它不会提前分配磁盘块，也不会创建占位文件；只是避免多个并发 fill 同时看到同一份空闲空间并一起超写。
+
+因为 writer 实际写盘会消耗空闲空间，而预留仍然存在，所以并发期间的空闲空间判断是偏保守的：可能出现磁盘实际上还能再写一点，但新 fill 已经被拒绝。这是有意的安全取舍。
+
+`fs_reserved_bytes` 只统计**当前活跃 writer** 的预留。没有 fill 进行时它为 0 是正常的，不代表 `LARGE_CACHE_MIN_FREE_BYTES` 没生效。`MIN_FREE` 是每个新 fill 准入时扣减的下限，不是常驻预留。
+
+实际可准入余量：
+
+```text
+fs_available_bytes - fs_reserved_bytes - min_free_bytes
+```
+
+对应指标：
+
+```text
+lagran_large_cache_fs_admission_headroom_bytes
+```
+
+##### 和逻辑硬上限的区别
+
+```text
+LARGE_CACHE_MAX_BYTES
+→ 不能让缓存逻辑总量无限增长
+
+LARGE_CACHE_MIN_FREE_BYTES
+→ 不能把缓存所在文件系统写到只剩很少空间
+```
+
+两个条件同时生效：
+
+- 逻辑上限没到，但文件系统快满 → 先按 LRU 驱逐缓存对象，仍不足才拒绝新 fill；
+- 文件系统还有空间，但逻辑缓存已到上限 → 仍按逻辑驱逐/拒绝。
+
+writer 的磁盘预留不再对 sidecar 使用固定 64 KiB：
+
+- 新对象按实际序列化后的 `LargeMeta` 大小预留；
+- 更新已有对象按旧 sidecar 大小加一个 segment 的余量预留；
+- 新 entry 的请求头使用保守上界（JSON 转义最多放大 6 倍）；
+- 额外保留 1 KiB 给时间戳位数和 JSON 编码细节。
+
+因此即使源站返回很大的响应头，元数据也会被计入 `used_bytes` 预留，不会在提交后把逻辑硬上限顶超。
+
+##### 平台差异
+
+- Linux/Unix：通过 `statvfs` 读取；
+- 不支持 `statvfs` 的平台：跳过文件系统检查，只保留逻辑上限；
+- 运行用户不是 root 时，`f_bavail` 不包含 root 保留块，判断更保守。
+
+##### 这不是文件系统配额
+
+准入检查只能反映“开始写入那一刻”的空闲空间。以下情况仍可能发生：
+
+- 其他进程在 fill 期间大量写盘；
+- 日志、临时文件、数据库占用空间；
+- 磁盘本身故障或只读；
+- 文件系统预留块被 root 使用。
+
+这时 writer 仍可能遇到 `ENOSPC` / I/O 错误，表现为该 fill 丢弃或只提交前缀。准入检查不能替代文件系统配额或磁盘容量告警。
+
+##### 监控
+
+```text
+lagran_large_cache_fs_available_bytes
+lagran_large_cache_fs_reserved_bytes
+lagran_large_cache_fs_admission_headroom_bytes
+lagran_large_cache_min_free_bytes
+```
+
+- `fs_available_bytes` 接近 `min_free_bytes`：新 fill 会开始被拒绝；
+- `fs_reserved_bytes` 很高：大量 fill 正在并发写入；
+- 磁盘实际剩余不足但 fill drop 不增长：检查是否命中逻辑上限或队列上限。
+
+##### 调优
+
+- 默认 1 GiB 适用于缓存盘还承载日志/临时文件的节点；
+- 缓存盘是独立数据盘且空间充足，可以降低到 256–512 MiB；
+- 缓存盘与系统盘共用，建议保持 1–5 GiB；
+- 设置过大会导致明明有空间却长期无法填充，需要结合磁盘容量和业务写入量评估。
+
+##### 队列满时的行为
+
+1. 停止把这个 fill 的后续字节送入 writer；
+2. 客户端响应不受影响，继续接收源站/现有流；
+3. writer 提交已经完整写入的前缀；
+4. 分片模式只提交完整分片；
+5. 对象保持 `complete=false`；
+6. 下一次请求只补缺失分片；
+7. 丢弃字节计入 fill drop 指标。
+
+因此这是**缓存降级**，不是请求失败。代价是：
+
+- 已读取的源站数据被丢弃；
+- 缓存不完整；
+- 后续请求可能再次回源缺失部分；
+- 源站带宽被浪费。
+
+##### 运行时关系
+
+配置加载时做钳制：
+
+```text
+LARGE_CACHE_FILL_QUEUE_BYTES：      1 MiB – 1 GiB
+LARGE_CACHE_FILL_QUEUE_TOTAL_BYTES：1 MiB – 4 GiB
+```
+
+实际全局预算：
+
+```text
+max(LARGE_CACHE_FILL_QUEUE_TOTAL_BYTES,
+    LARGE_CACHE_FILL_QUEUE_BYTES)
 ```
 
 例如：
 
+```env
+LARGE_CACHE_FILL_QUEUE_BYTES=134217728
+LARGE_CACHE_FILL_QUEUE_TOTAL_BYTES=67108864
+```
+
+实际总预算仍是 128 MiB，否则单 fill 本身就无法容纳。
+
+修改后需要重启 edge 生效。两个值不预分配内存：配置 256 MiB 不会在启动时直接占用 256 MiB，只是运行时预留上限。
+
+##### 调优
+
+当前默认值偏保守，适合“内存优先、允许缓存不完整”的 edge。
+
+队列经常丢弃，但磁盘水位不高：
+
+- 适当增大 `LARGE_CACHE_FILL_QUEUE_TOTAL_BYTES`；
+- 或降低并发大 Range 数量；
+- 或提高磁盘写入能力。
+
+队列经常丢弃，且磁盘水位接近上限：
+
+- 增大 `LARGE_CACHE_MAX_BYTES`；
+- 清理缓存；
+- 或降低单对象填充上限。
+
+内存紧张：
+
+```env
+# 单 fill 仍应能容纳几个分片，避免轻微抖动就丢弃
+LARGE_CACHE_FILL_QUEUE_BYTES=33554432
+LARGE_CACHE_FILL_QUEUE_TOTAL_BYTES=134217728
+```
+
+高并发大文件、内存充足：
+
+```env
+LARGE_CACHE_FILL_QUEUE_BYTES=67108864
+LARGE_CACHE_FILL_QUEUE_TOTAL_BYTES=536870912
+```
+
+可按下面的关系估算：
+
+```text
+全局预算 ≈ 预期同时活跃的 fill 数 × 单 fill 上限
+```
+
+但不要只靠调大队列解决慢磁盘问题：队列越大，只是把更多数据暂存在内存里，最终仍受磁盘吞吐限制。
+
+##### 内存估算的边界
+
+预算统计的是**队列中等待 writer 接收的字节**：
+
+- 数据 reserve 后进入队列；
+- writer 收到 chunk 后释放预算；
+- writer 正在写盘的那一个 chunk 不再计入队列预算；
+- 源站响应体、客户端响应缓冲、`Bytes` 复制和 Tokio 任务也有额外开销。
+
+所以实际 RSS 会略高于这两个预算值。它们是保护线，不是精确内存配额。
+
+##### 和分片参数的区别
+
+```text
+LARGE_CACHE_CHUNK_BYTES
+→ 缓存/回源的逻辑网格，默认 1 MiB
+
+LARGE_CACHE_FILL_QUEUE_BYTES
+→ 单个 fill 的内存队列
+
+LARGE_CACHE_FILL_QUEUE_TOTAL_BYTES
+→ 所有 fill 队列的内存总预算
+
+LARGE_CACHE_FILL_MAX_BYTES
+→ 单对象最多填充多少逻辑字节
+
+LARGE_CACHE_MAX_BYTES
+→ 磁盘缓存硬上限
+```
+
+分片大小影响回源粒度和缓存覆盖；队列参数只影响填充过程中的内存缓冲和丢弃行为。
+
+#### 5.8.2 多段 Range
+
+支持标准多段请求：
+
+```http
+Range: bytes=0-1,4-5
+```
+
+解析规则：
+
+- 最多 16 段；
+- 每段独立解析，支持 `bytes=start-end`、`bytes=start-`、`bytes=-N`；
+- 不可满足的段在还有其他可用段时跳过；
+- 全部不可满足时回退源站，由源站返回 416 或自己的 multipart 响应；
+- 超过 16 段时回退源站。
+
+缓存命中时：
+
+1. 计算所有段的最小 start 和最大 end，得到首尾包络；
+2. 对包络内的分片执行 `ChunkPlan`；
+3. 已缓存分片读磁盘，缺失分片按分片回源并写入；
+4. 从磁盘读取各段，构造 `multipart/byteranges` 响应。
+
+冷缓存时：
+
+- 先通过 HEAD（不支持时用 `bytes=0-0`）获取对象总长度；
+- 在首尾包络内做 chunk-aligned fill；
+- 填充完成后再从磁盘构造 multipart 响应。
+
+响应格式：
+
+```http
+HTTP/1.1 206 Partial Content
+Content-Type: multipart/byteranges; boundary=lagran-...
+Content-Length: ...
+X-Cache: HIT
+X-Lagran-Cache-Source: l3
+X-Lagran-Cache-Reason: range-multipart
+```
+
+每个 part 包含：
+
+```http
+--lagran-...
+Content-Type: <cached content-type>
+Content-Range: bytes 0-1/<total>
+
+<bytes 0-1>
+```
+
+特点：
+
+- 不把整个对象读入内存，part 直接流式读取稀疏文件；
+- `Content-Length` 按 part header、part body、CRLF 和最终 boundary 精确计算；
+- 重叠段按客户端顺序分别输出，不去重；
+- 段跨度过大、超过单对象填充上限、磁盘/文件系统空间不足、源站 ETag/Content-Range 不匹配时，回退源站 multipart 响应，客户端仍得到正确结果。
+
+限制：
+
+- 冷请求的多段 Range 会填充首尾包络之间的所有缺失分片；如果两段相隔很远，可能触发填充上限并回退源站；
+- `If-Range` 请求仍交给源站处理，不参与 large cache 多段拼接；
+- 普通小对象/未启用 large cache 时仍由源站处理多段请求。
+
+### 5.9 视频 Range 与 504 优化
+
+播放器常见的：
+
 ```http
 Range: bytes=0-
 ```
 
-不会缓存完整 700 MB 视频，而是缓存前：
+表示“从 0 到文件末尾”。Edge 会按分片回源和缓存：
 
 ```text
-RANGE_FILL_MAX_BYTES
+首次 bytes=0-
+  → 从分片 0 开始请求源站
+  → 边下边播，同时写入完整分片
+  → 填满后可 complete=true
+
+第二次 bytes=0-
+  → 所有分片命中，纯 L3
 ```
 
-个字节。客户端仍会收到完整响应，不受缓存上限影响。
-
-后续播放器如果请求：
-
-```http
-Range: bytes=1048576-2097151
-```
-
-且该区间已在前缀片段内，则直接命中大缓存。
-
-`RANGE_FILL_MAX_BYTES` 是单次写入的**上限**，不是每次都会缓存这么多。实际 segment 大小取决于：
-
-```text
-客户端实际请求的 Range
-源站实际返回的 Content-Range
-客户端是否在达到上限前停止读取或断开
-```
-
-因此看到：
-
-```json
-"segments": [[0, 83746]]
-```
-
-是正常现象：播放器可能只请求了前 83,747 字节作为 MP4 头部，或在 32 MiB 前就断开了。它不会为了凑满 32 MiB 继续向源站读取。
-
-带明确结束位置且不超过上限的 Range 会完整缓存：
-
-```http
-Range: bytes=0-1048575
-```
-
-后缀 Range 只缓存尾部：
-
-```http
-Range: bytes=-1048576
-```
-
-上限：
-
-```ini
-RANGE_FILL_MAX_BYTES=33554432
-```
-
-大缓存使用稀疏文件保存对象，并在 sidecar 元数据中记录已完成的字节段：
+例如 100 MiB 文件、1 MiB 分片，完整播放一次后：
 
 ```json
 {
-  "content_length": 748814277,
+  "complete": true,
+  "segments": [[0, 104857599]]
+}
+```
+
+第二次请求：
+
+```http
+X-Cache: HIT
+X-Lagran-Cache-Source: l3
+```
+
+如果客户端只读了 32 MiB 就断开：
+
+```json
+{
   "complete": false,
   "segments": [[0, 33554431]]
 }
 ```
 
-只有完整落盘的片段才会出现在 `segments` 中；客户端中断时，已完成的前缀仍会保留，不会被标记为完整对象。
+这是 32 个完整分片；下一次 `bytes=1024-` 会从第 33 个分片继续请求缺失分片，不会从头覆盖。
 
-说明：
+播放器 seek：
 
-```text
-开放式 Range 本身仍需要源站补齐剩余区间
-因为缓存中只有前缀
-但前缀部分不再重复从源站下载
+```http
+Range: bytes=52428800-
 ```
 
-## 前缀 + 源站剩余区间拼接
+只会回源 `52428800` 所在分片及其后续缺失分片；已经完整缓存的分片直接从磁盘读取。
 
-当同一对象已有可用的连续前缀时，Edge 会把请求拆成两段：
+磁盘跟不上客户端时，填充队列会丢弃后续写盘，只提交已经完整落盘的分片；客户端响应不受影响。
+`LARGE_CACHE_FILL_MAX_BYTES` 可以限制单对象最多写多少，避免大视频占满磁盘。
+
+`RANGE_FILL_MAX_BYTES` 只用于预热任务的前缀请求，不参与客户端 Range 的分片规划。
+
+## 缺失分片回源与缓存段拼接
+
+对 partial 对象，响应按分片计划拆成多个段：
 
 ```text
-客户端 Range: bytes=0-
-
-  [0 .. cached_end]      从 L3 大缓存读取
-  [cached_end+1 .. end]  向源站请求剩余区间
-  → 合并为一个 206 响应
+客户端 Range: bytes=0-104857599
+  [已缓存分片]        → 磁盘
+  [缺失分片区间]      → 源站 Range，获取完整分片
+  [已缓存分片]        → 磁盘
+  [下一段缺失分片]    → 源站 Range
 ```
+
+每个缺失分片区间是连续的完整分片，例如：
+
+```http
+Range: bytes=4194304-5242879
+```
+
+源站返回该区间后：
+
+- 只把客户端请求范围内的字节写给客户端；
+- 分片前后多取的边界字节只写入缓存；
+- 客户端断开时，只提交已经完整写入的分片；
+- 已缓存分片不会被重复下载。
 
 响应头示例：
 
 ```http
 HTTP/1.1 206 Partial Content
-Content-Range: bytes 0-748814276/748814277
+Content-Range: bytes 0-104857599/104857600
 X-Cache: HIT
 X-Lagran-Cache-Source: l3+origin
-X-Lagran-Cache-Reason: range-splice
+X-Lagran-Cache-Reason: range-chunks
+```
+
+全部缺失分片补齐后：
+
+```http
+X-Cache: HIT
+X-Lagran-Cache-Source: l3
+X-Lagran-Cache-Reason: range-large-cache
 ```
 
 特点：
 
-```text
-前缀从磁盘读取，降低源站回源字节数
-剩余区间按流式转发，不把完整对象读入内存
-如果缓存前缀带 ETag / Last-Modified，会带 If-Range 校验对象未变化
-源站返回 200（对象已变化）时回退普通回源
-缓存内容带非 identity Content-Encoding 时不做拼接
-```
-
-拼接仍有源站请求，因此不是“纯缓存命中”；它优化的是：
-
-```text
-已经缓存的前缀不再重复下载
-播放器 seek 回到开头时首段从磁盘返回，不再重复下载
-```
-
-仍需注意：
-
-```text
-多段 Range 不拼接
-源站不支持 Range 时不拼接
-```
-
-原因：
-
-```text
-视频文件可能数百 MB
-首次播放就写入完整大缓存会与客户端读取竞争磁盘
-还可能写满缓存目录或拖慢其他请求
-```
-
-流媒体读取超时单独配置：
-
-```ini
-ORIGIN_STREAM_READ_TIMEOUT_MS=120000
-```
-
-这样：
-
-```text
-普通 API 回源仍使用 30 秒空闲超时
-视频 Range 使用更长超时
-```
-
-如果 Caddy 在 Edge 前面，建议关闭响应缓冲：
-
-```text
-reverse_proxy 127.0.0.1:8081 {
-    flush_interval -1
-}
-```
-
-`flush_interval -1` 让 Caddy 尽快把字节刷给播放器，避免中间层缓冲导致播放器等待。
+- 只回源缺失分片，不按整个客户端 Range 回源；
+- 多个不连续缺失区间分别回源；
+- 源站返回 200、ETag/Content-Range 不匹配时删除旧段并回退普通回源；
+- 源站非 identity `Content-Encoding` 时不拼接；
+- 多段 Range（`bytes=0-1,4-5`）在 large cache 上返回 `multipart/byteranges`；缺失区间按分片填充，无法覆盖时回退源站透传；
+- 首次后缀 Range 会先做一次 HEAD（或 `bytes=0-0`）探测总长度，然后按分片填充。
 
 ### 5.9.1 回源超时体系
 
@@ -2126,7 +2625,7 @@ ReadTimedout
 
 Caddy 在 Edge 前面时，建议：
 
-```text
+```caddyfile
 reverse_proxy 127.0.0.1:8081 {
     flush_interval -1
 }
@@ -2138,14 +2637,14 @@ reverse_proxy 127.0.0.1:8081 {
 
 普通站点：
 
-```ini
+```env
 ORIGIN_READ_TIMEOUT_MS=30000
 ORIGIN_STREAM_READ_TIMEOUT_MS=120000
 ```
 
 跨区域对象存储、冷启动视频：
 
-```ini
+```env
 ORIGIN_READ_TIMEOUT_MS=60000
 ORIGIN_STREAM_READ_TIMEOUT_MS=300000
 ```
@@ -2271,7 +2770,7 @@ Origin          → |origin=<hash>
 
 如果这些头不影响响应体（例如单语言站点、固定的 CORS Origin），可以在 Edge 配置：
 
-```ini
+```env
 CACHE_KEY_IGNORE_HEADERS=accept-language,origin
 ```
 
@@ -2341,7 +2840,7 @@ CACHE_KEY_IGNORE_HEADERS=accept-language,origin
 
 阈值由环境变量调整：
 
-```ini
+```env
 CC_STATIC_MULTIPLIER=8
 CC_AUTH_DIVISOR=2
 CC_DOWNLOAD_MULTIPLIER=2
@@ -2416,7 +2915,7 @@ GET /api/v1/cc/bans/history?domain=cdn.example.com&limit=500
 
 ### 6.7 行为评分
 
-```ini
+```env
 CC_BEHAVIOR_ENABLED=true
 CC_BEHAVIOR_SCORE=4
 ```
@@ -2513,7 +3012,7 @@ journalctl -u lagran-dns -f
 
 Edge 访问日志：
 
-```ini
+```env
 ACCESS_LOG_PATH=/var/lib/lagran/access.log
 ACCESS_LOG_JSON=false
 ACCESS_LOG_REPORT=true
@@ -2827,7 +3326,7 @@ Accept-Ranges: bytes
 检查是否：
 
 - 请求带 `If-Range`
-- 多段 Range
+- 多段 Range 的首尾包络超过填充上限（会透传）
 - 对象低于大缓存阈值
 - 规则 bypass
 - 带 Cookie/Authorization/no-store
@@ -2893,7 +3392,7 @@ callback timeout after 5s: http://<edge>:8081/__lagran/cache-diagnose
 
 修正：
 
-```ini
+```env
 EDGE_ADMIN_LISTEN=0.0.0.0:8082
 AGENT_URL=http://<内网IP>:8082
 ```
@@ -3152,7 +3651,7 @@ cd apps/frontend && npm run generate
 
 - 普通缓存以完整对象为单位；大对象支持 partial Range segment，但仅覆盖已请求区间。
 - 大对象完整 GET 需要 `complete=true`；partial 不能拼接为完整响应。
-- 单段 Range 才支持 partial 填充；多段 Range 透传。
+- 大对象多段 Range 已在 large cache 支持 multipart 缓存响应；冷请求的填充范围是首尾包络，跨度过大或超过填充上限时回退源站透传。
 - `no-cache` 响应不进入共享缓存；请求 no-cache、`max-age=0` 有 validator 时走条件请求 304 复用，无 validator 时回源。
 - `only-if-cached`、`min-fresh`、`max-stale`、`stale-if-error` 尚未完整实现；请求 no-cache 选择直接回源。
 - 修改缓存规则/配置不会自动删除旧缓存。

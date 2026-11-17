@@ -1,10 +1,11 @@
 ---
-title: 请求流水线迁移
-description: Pingora 与 Legacy 数据面的迁移阶段与原则。
-outline: [2, 3]
+title: "请求流水线迁移"
 ---
 
-> 本文为完整原始文档，整理自主项目 `docs/request-pipeline-migration.md`。
+::: tip 自动同步
+本页由 `scripts/sync-reference.mjs` 从主仓库 `Lagran93/Lagran/docs` 同步生成，请勿在此手工修改。
+修改请提交到主仓库后重新执行 `npm run docs:sync`。
+:::
 
 # RequestPipeline 迁移
 

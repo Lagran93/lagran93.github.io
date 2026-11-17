@@ -19,6 +19,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # docs/reference/ is generated from the Lagran source repository.
+      # Sparse-checkout keeps the job fast: only docs/ is published.
+      - name: Checkout Lagran manuals
+        uses: actions/checkout@v4
+        with:
+          repository: Lagran93/Lagran
+          path: .lagran-source
+          sparse-checkout: docs
+          sparse-checkout-cone-mode: false
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -26,6 +35,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
       - name: Build documentation
+        env:
+          LAGRAN_SOURCE_DIR: ${{ github.workspace }}/.lagran-source
         run: npm run docs:build
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

@@ -3,8 +3,8 @@ layout: home
 
 hero:
   name: Lagran CDN
-  text: 企业级边缘加速与调度
-  tagline: 从 Control、Edge、DNS 到缓存、WAF、GeoDNS，一份可落地的部署、使用与运维手册。
+  text: 可自托管的企业级 CDN
+  tagline: Control 控制面 + Pingora 边缘 + 自研权威 DNS + Nuxt 控制台。从部署、接入、缓存策略到 WAF/CC、GeoDNS、运维排障，一套文档走完。
   image:
     src: /logo.svg
     alt: Lagran CDN
@@ -16,67 +16,74 @@ hero:
       text: 部署总览
       link: /deploy/
     - theme: alt
-      text: GitHub
-      link: https://github.com/Lagran93/Lagran
+      text: 在线演示
+      link: https://console.lagrancdn.com
 
 features:
   - icon: 🚀
     title: 边缘加速
-    details: Pingora 数据面、普通缓存与大对象 Range 缓存，覆盖静态资源、下载与视频。
+    details: Pingora 数据面，HTTP/1.1/2、TLS/SNI 动态证书、多源站池；内存 / 磁盘 / Redis L2 缓存，含 ETag、304、SWR 与 single-flight。
+  - icon: 📦
+    title: 大对象与 Range
+    details: 独立 L3 大缓存，1 MiB 固定分片、只回源缺失分片、最多 16 段 multipart/byteranges、容量水位与文件系统预留。
   - icon: 🌍
     title: GeoDNS 调度
-    details: 基于 ip2region 的国家/省/市/ISP 解析，结合权重、负载与在线状态选择节点。
-  - icon: 🔐
+    details: 自研权威 DNS（UDP/TCP、EDNS0+ECS），基于 ip2region 的国家 / 省 / 市 / ISP 加权评分，含缓存与降级。
+  - icon: 🛡️
     title: 安全防护
-    details: WAF、CC 防护、签名 URL、Origin 鉴权、防盗链和多租户权限。
+    details: WAF 托管规则 + 自定义 DSL + IP/Geo/ASN 黑白名单、CC 聚合与 PoW 质询、签名 URL、回源鉴权、防盗链。
   - icon: 🧭
-    title: 可运维
-    details: 配置版本、审批发布、灰度回滚、缓存预热、健康检查与故障排查。
+    title: 可治理
+    details: 配置版本、Diff、强制审批、灰度发布与自动回滚；用户组模块权限、多租户项目隔离、操作审计。
+  - icon: 🏢
+    title: Origin Shield
+    details: 管理员维护 Shield 白名单，域名只能下拉选择；区域汇聚回源，降低源站带宽与连接压力。
 ---
 
 ## 从这里开始
 
-<div class="vp-features">
+### 第一次部署
 
-### 我是第一次部署
+按 **Control → Edge → DNS（可选）** 的顺序安装，先跑通最小可用环境。
 
-从 [部署总览](/deploy/) 开始，按 Control → Edge → DNS 的顺序安装。
-
-- [部署 Control](/deploy/control)
-- [部署 Edge](/deploy/edge)
-- [部署 DNS](/deploy/dns)
+- [部署总览](/deploy/)：顺序、端口、目录、验收清单
+- [部署 Control](/deploy/control)：PostgreSQL、密钥、管理员、前端与反向代理
+- [部署 Edge](/deploy/edge)：节点令牌、缓存与大对象、管理口隔离
+- [部署 DNS](/deploy/dns)：Zone/NS/SOA、限速、调度缓存与兜底
 
 ### 我在使用控制台
 
-- [项目与域名](/use/domains)
-- [缓存规则与 Cache Key](/use/cache)
-- [刷新与预热](/use/prefetch)
-- [WAF 与 CC 防护](/use/waf)
+- [项目、权限与域名接入](/use/domains)：用户组模块权限、源站 SNI/回源 Host、接入向导
+- [缓存规则与 Cache Key](/use/cache)：请求/响应两阶段匹配、TTL 优先级、Vary
+- [刷新与预热](/use/prefetch)：URL / 目录 / 标签刷新、定时预热、大对象自动 Range
+- [WAF 与 CC 防护](/use/waf)：模式、规则 DSL、Geo/ASN、共享封禁与质询
+- [Origin Shield](/use/origin-shield)：白名单、部署顺序、防回源环
 
 ### 我在排查问题
 
-- [监控与健康检查](/ops/monitoring)
-- [故障排查](/ops/troubleshooting)
-- [缓存不命中](/ops/troubleshooting#缓存不命中)
-- [大文件缓存没有文件](/ops/troubleshooting#大文件缓存没有文件)
+- [监控与健康检查](/ops/monitoring)：端点、指标、日志、告警
+- [故障排查](/ops/troubleshooting)：缓存不命中、大缓存不落盘、504、401、DNS
+- [安全清单](/ops/security)：上线前必须逐项确认的配置
+- [备份与恢复](/ops/backup)：数据库、环境文件、证书与 GeoIP
 
 ### 我要参与开发
 
-- [本地开发与测试](/dev/development)
-- [请求流水线](/dev/request-pipeline)
-- [完整架构说明](/reference/architecture)
-
-</div>
+- [本地开发与测试](/dev/development)：docker compose、cargo、npm、集成脚本
+- [请求流水线](/dev/request-pipeline)：Pingora / Legacy 双数据面与共享策略
+- [完整参考](/reference/)：与主仓库同步的原始手册
 
 ## 文档结构
 
 | 区域 | 内容 |
 | --- | --- |
-| [指南](/guide/introduction) | 项目定位、快速开始、系统架构 |
-| [部署](/deploy/) | Control、Edge、DNS、TLS、升级 |
-| [使用](/use/) | 域名、缓存、预热、WAF、证书、发布、GeoDNS |
-| [运维](/ops/) | 监控、备份、故障排查、安全 |
-| [开发](/dev/) | 本地环境、测试、请求流水线 |
-| [参考](/reference/) | 完整原始手册与深度说明 |
+| [指南](/guide/introduction) | 项目定位、能力边界、版本策略、系统架构 |
+| [部署](/deploy/) | Control、Edge、DNS、HTTPS/TLS、升级与回滚 |
+| [使用](/use/) | 域名、缓存、刷新预热、WAF/CC、证书、配置发布、GeoDNS、Origin Shield |
+| [运维](/ops/) | 监控、备份、故障排查、安全基线 |
+| [开发](/dev/) | 本地环境、测试脚本、请求流水线 |
+| [参考](/reference/) | 从主仓库 `docs/` 自动同步的完整手册 |
 
-> 本站内容整理自主项目 `docs/` 目录。遇到与代码不一致时，以仓库中的最新代码和完整手册为准。
+::: tip 文档来源
+导航页是按代码现状重新整理的；`参考` 页面由 `npm run docs:sync` 从主仓库同步，内容以 `main` 分支代码为准。
+:::
+

@@ -4,7 +4,10 @@
   "version": "1.0.0",
   "description": "Lagran CDN documentation site",
   "scripts": {
+    "docs:sync": "node scripts/sync-reference.mjs",
+    "predev": "npm run docs:sync",
     "docs:dev": "vitepress dev docs",
+    "prebuild": "npm run docs:sync",
     "docs:build": "vitepress build docs",
     "docs:preview": "vitepress preview docs"
   },

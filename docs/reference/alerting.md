@@ -1,10 +1,11 @@
 ---
-title: 告警建议
-description: 稳定性告警规则与访问日志补充建议。
-outline: [2, 3]
+title: "告警建议"
 ---
 
-> 本文为完整原始文档，整理自主项目 `docs/alerting.md`。
+::: tip 自动同步
+本页由 `scripts/sync-reference.mjs` 从主仓库 `Lagran93/Lagran/docs` 同步生成，请勿在此手工修改。
+修改请提交到主仓库后重新执行 `npm run docs:sync`。
+:::
 
 # 稳定性告警建议
 

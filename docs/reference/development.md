@@ -1,10 +1,11 @@
 ---
-title: 开发指南
-description: 本地开发、测试、缓存、WAF、调度与已知限制。
-outline: [2, 3]
+title: "开发指南"
 ---
 
-> 本文为完整原始文档，整理自主项目 `docs/development.md`。
+::: tip 自动同步
+本页由 `scripts/sync-reference.mjs` 从主仓库 `Lagran93/Lagran/docs` 同步生成，请勿在此手工修改。
+修改请提交到主仓库后重新执行 `npm run docs:sync`。
+:::
 
 # Development Guide
 
@@ -34,6 +35,48 @@ cd apps/frontend
 npm install
 NUXT_PUBLIC_API_BASE=http://localhost:8080 npm run dev
 ```
+
+## Integration Tests (repository layer)
+
+`apps/control/tests/` holds integration tests that exercise the SQL directly —
+transactional atomicity, `COALESCE` merges, NULL-safe unique indexes and the
+targeted name queries. They need a real PostgreSQL instance; SQLite or a mock
+would not reproduce the constraint and locking behaviour under test.
+
+Each test creates its own schema, runs the full migration set into it and drops
+it afterwards, so cases run in parallel and cannot see each other's rows.
+
+```bash
+# Point at any database the user may create schemas in.
+export TEST_DATABASE_URL="postgres://lagran:pass@127.0.0.1:5432/lagran"
+cargo test -p control --test repository
+```
+
+Falls back to `DATABASE_URL` when `TEST_DATABASE_URL` is unset.
+
+**With neither set the tests skip with a message and exit 0**, so `cargo test`
+still works on a machine without PostgreSQL. A skip that nobody notices is worse
+than a failure, so set `REQUIRE_TEST_DATABASE=1` wherever the tests must actually
+run — a missing or unusable database then fails the run:
+
+```bash
+TEST_DATABASE_URL="postgres://lagran:pass@127.0.0.1:5432/lagran_test" \
+REQUIRE_TEST_DATABASE=1 \
+cargo test -p control --test repository
+```
+
+CI does exactly this. The `backend` job in `.github/workflows/ci.yml` starts a
+`postgres:16` service container, points `TEST_DATABASE_URL` at it and sets
+`REQUIRE_TEST_DATABASE=1`, so the integration tests cannot be skipped silently
+there.
+
+The schema is dropped by an explicit `TestDb::close()` at the end of each test.
+Cleanup deliberately does not live in `Drop`: dropping a pool has to await, and a
+`Drop` impl that starts a thread and joins it deadlocks once the test runtime
+begins shutting down. A test that returns before `close()` leaves its schema
+behind; the next run ignores it, and
+`SELECT schema_name FROM information_schema.schemata WHERE schema_name LIKE 'lagran_test_%'`
+lists any leftovers.
 
 ## Auth
 
