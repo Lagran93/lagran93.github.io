@@ -43,9 +43,9 @@ curl -fsSL https://raw.githubusercontent.com/Lagran93/Lagran/main/install.sh \
 | 端口 | 组件 | 用途 | 暴露范围 |
 | --- | --- | --- | --- |
 | `8080` | Control | API 与控制台后端 | 仅反代/内网 |
-| `8081` | Edge | 公共 HTTP 数据面 | 公网 |
+| `80` | Edge | 公共 HTTP 数据面 | 公网 |
 | `443` | Edge | 公共 HTTPS 数据面 | 公网 |
-| `8082` | Edge | 管理 / Agent 接口 | 仅 Control |
+| `8081` | Edge | 管理 / Agent 接口 | 仅 Control |
 | `53/udp,tcp` | DNS | 权威 DNS | 公网 |
 | `5432` | PostgreSQL | 数据库 | 本机/内网 |
 | `6379` | Redis（可选） | Control 会话、Edge CC/限流/L2 | 内网 |
@@ -98,7 +98,7 @@ lagran-edge-update.path / lagran-edge-update.service # Edge 升级
 
 ## 安全基线
 
-- 不要把 `8082` 管理口暴露到公网；`AGENT_URL` 使用内网地址。
+- 不要把 `8081` 管理口暴露到公网；`AGENT_URL` 使用内网地址。
 - 生产关闭 `SEED_DEMO`，开启 `REQUIRE_SECURE_SECRETS=true`。
 - `JWT_SECRET`、`AGENT_TOKEN`、`WAF_RULEPACK_SECRET`、`CHALLENGE_SECRET` 使用随机值，环境文件权限 `0600`。
 - 每个 Edge 使用独立节点令牌，不要复用 Control 的全局 `AGENT_TOKEN`。

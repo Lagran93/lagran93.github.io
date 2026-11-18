@@ -23,15 +23,7 @@ Edge 承载真实用户流量：TLS 终止、缓存、回源、WAF/CC、限流�
 ## 2. 安装
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Lagran93/Lagran/main/install.sh \
-  | sudo env LAGRAN_REPO=Lagran93/Lagran \
-      AGENT_TOKEN='<节点令牌>' \
-      NODE_ID='edge-01' \
-      CONTROL_URL='http://<control-internal>:8080' \
-      AGENT_URL='http://<edge-internal>:8082' \
-      PUBLIC_IP='<节点公网 IP>' \
-      NODE_REGION='cn-east-1' \
-      bash -s -- edge
+curl -fsSL https://raw.githubusercontent.com/Lagran93/Lagran/main/install.sh | sudo env LAGRAN_REPO=Lagran93/Lagran AGENT_TOKEN='<节点令牌>' NODE_ID='<节点 ID>' CONTROL_URL='http://<control>:8080' AGENT_URL='http://<节点公网 IP>:8081' PUBLIC_IP='<节点公网 IP>' NODE_REGION='<节点区域>' bash -s -- edge
 ```
 
 安装内容：
@@ -53,15 +45,14 @@ sudoedit /etc/lagran/edge.env
 ### 节点与监听
 
 ```ini
-EDGE_LISTEN=0.0.0.0:8081
-# 与 Control 不同机时必须改成内网地址，并只对该来源放行
-EDGE_ADMIN_LISTEN=127.0.0.1:8082
+EDGE_LISTEN=0.0.0.0:80
+EDGE_ADMIN_LISTEN=0.0.0.0:8081
 
 NODE_ID=edge-01
 PUBLIC_IP=203.0.113.10
 NODE_REGION=cn-east-1
-CONTROL_URL=http://<control-internal>:8080
-AGENT_URL=http://<edge-internal>:8082
+CONTROL_URL=http://<控制面 IP>:8080
+AGENT_URL=http://<节点 IP>:8081
 AGENT_TOKEN=<节点令牌>
 HEARTBEAT_INTERVAL=15
 CONFIG_SYNC_INTERVAL_SECS=15
@@ -73,7 +64,7 @@ CHALLENGE_SECRET=<openssl rand -hex 32>
 ### 缓存
 
 ```ini
-# memory | disk | hybrid（hybrid = 内存 L1 + 磁盘 L2）
+# memory | disk | hybrid（hybrid = 内存 L1 + 磁盘 L2） | l2 | redis
 CACHE_BACKEND=hybrid
 CACHE_TTL=60
 CACHE_CAPACITY=10000          # 内存条目数

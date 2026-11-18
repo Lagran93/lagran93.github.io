@@ -156,6 +156,68 @@ console.example.com {
 }
 ```
 
+Nginx 配置示例：
+```
+server {
+    listen 80;
+    server_name console.example.com;
+
+    # ACME HTTP-01 必须保留给控制面
+    location /.well-known/acme-challenge/ {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # 其余请求跳转 HTTPS
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+server {
+    listen 443 ssl;
+    http2 on;                       # 老版本 nginx 用 listen 443 ssl http2;
+    server_name console.example.com;
+
+    ssl_certificate     /etc/letsencrypt/live/console.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/console.example.com/privkey.pem;
+
+    root /opt/lagran/web;
+    index index.html;
+
+    gzip on;
+    gzip_vary on;
+    gzip_comp_level 5;
+    gzip_min_length 256;
+    gzip_proxied any;
+    gzip_types
+        text/plain text/css text/xml text/javascript
+        application/javascript application/json application/xml
+        application/rss+xml application/atom+xml application/wasm
+        image/svg+xml font/ttf font/otf font/woff font/woff2;
+
+    location /api/ {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_http_version 1.1;
+
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $host;
+
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+    }
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
+```
+
 ::: warning SPA 回退
 前端是 SPA（`ssr: false`）。所有非 `/api/*` 路径必须回退到 `index.html`，否则刷新 `/domains` 这类地址会 404。如果登录请求被发到 `localhost:8080`，说明前端 `NUXT_PUBLIC_API_BASE` 或反代配置有误。
 :::
@@ -163,8 +225,8 @@ console.example.com {
 ## 7. 防火墙
 
 ```text
-公网：443（控制台）、80（ACME / 跳转）
-内网：8082（Edge 管理口回调）、5432、6379
+公网：443（控制台）、80（ACME / 跳转）、8081（Edge 管理口回调）
+内网：5432、6379
 仅本机：8080（由反代访问）
 ```
 
